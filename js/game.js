@@ -24,6 +24,8 @@ const PizzaGame = (() => {
       this.score = 0;
       this.lives = 3;
       this.flash = 0;
+      this.orders = new PizzaOrders.Orders();
+      this.preferOrderTopping = true;
       this.objects = [];
       this.effects = [];
       this.player = { x: 480, y: 290, facing: 1, walk: 0, stride: 0, protection: 0 };
@@ -46,7 +48,15 @@ const PizzaGame = (() => {
       const heading = Math.atan2(targetY - y, targetX - x);
       const velocity = speed * (.87 + random() * .26);
       const hazard = this.elapsed >= 4 && random() < hazardChance;
-      const [kind, points] = hazard ? [pick(hazards, random), 0] : pick(toppings, random);
+      let choices = toppings;
+      if (!hazard) {
+        const missing = this.orders.missing();
+        if (this.preferOrderTopping && missing.length) {
+          choices = toppings.filter(([kind]) => missing.includes(kind));
+        }
+        this.preferOrderTopping = !this.preferOrderTopping;
+      }
+      const [kind, points] = hazard ? [pick(hazards, random), 0] : pick(choices, random);
       this.objects.push({
         x, y, kind, points, hazard, angle: 0,
         vx: Math.cos(heading) * velocity,
@@ -66,6 +76,7 @@ const PizzaGame = (() => {
     }
 
     step(dt, xDirection, yDirection) {
+      dt = Math.min(dt, Math.max(0, PizzaOrders.limit - this.elapsed));
       this.elapsed += dt;
       const player = this.player;
       const length = Math.hypot(xDirection, yDirection);
@@ -97,6 +108,7 @@ const PizzaGame = (() => {
 
         if (!object.hazard) {
           this.score += object.points;
+          this.orders.collect(object.kind);
           this.burst(object.x, object.y, '+' + object.points, false);
           events.push('collect');
           return false;
@@ -109,6 +121,14 @@ const PizzaGame = (() => {
         events.push('hit');
         return false;
       });
+      if (this.lives && this.elapsed < PizzaOrders.limit) {
+        const orderEvent = this.orders.step(dt, player);
+        if (orderEvent) events.push(orderEvent);
+        if (orderEvent === 'deliver') {
+          this.score += 100;
+          this.burst(player.x, player.y, 'PIZZA SERVED +100', false);
+        }
+      }
       return events;
     }
   }

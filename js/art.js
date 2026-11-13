@@ -175,5 +175,50 @@ const PizzaArt = (() => {
     ctx.restore();
   }
 
-  return { kitchen, chef, item };
+  function pizza(ctx, x, y, toppings, scale = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    oval(ctx, 0, 0, 28, 24, '#e2964f', ink);
+    oval(ctx, 0, 0, 23, 19, '#c94a3f');
+    oval(ctx, 0, 0, 20, 16, '#ffd57a');
+    const positions = [[-9, -7], [10, -6], [-11, 5], [10, 7], [0, 0]];
+    Object.keys(toppings).forEach((kind, index) => {
+      const [px, py] = positions[index];
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.scale(.33, .33);
+      item(ctx, { x: 0, y: 0, kind });
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  function station(ctx, place, type, active, order) {
+    const { x, y, label } = place;
+    const oven = type === 'oven';
+    ctx.save();
+    ctx.translate(x, y);
+    if (active) oval(ctx, 0, 0, 39, 36, '#ffee9f', '#9a5238');
+    box(ctx, -27, -26, 54, 48, 9, oven ? '#b4554c' : '#70a99b', ink);
+    if (oven) {
+      box(ctx, -21, -15, 42, 29, 9, '#51313b', ink);
+      box(ctx, -17, -9, 34, 17, 6, order.stage === 'baking' ? '#ff8c4e' : '#76404a');
+      if (['oven', 'baking', 'ready'].includes(order.stage)) {
+        pizza(ctx, 0, 0, order.collected, .58);
+      }
+    } else {
+      box(ctx, -22, -21, 44, 35, 6, '#d3e4c2', ink);
+      box(ctx, -15, -15, 30, 22, 5, '#eed2a3', ink);
+      box(ctx, -5, -5, 10, 2, 1, '#98704e');
+    }
+    ctx.textAlign = 'center';
+    ctx.font = '900 12px system-ui';
+    box(ctx, -29, 25, 58, 20, 5, '#492b3b');
+    ctx.fillStyle = '#fff1d5';
+    ctx.fillText(label, 0, 39);
+    ctx.restore();
+  }
+
+  return { kitchen, chef, item, pizza, station };
 })();

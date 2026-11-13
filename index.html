@@ -6,6 +6,7 @@
   <title>Pizza Panic</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="js/art.js"></script>
+  <script defer src="js/orders.js"></script>
   <script defer src="js/game.js"></script>
   <script defer src="js/main.js"></script>
 </head>
@@ -13,10 +14,15 @@
   <main class="cabinet">
     <header class="hud">
       <div><small>SCORE</small><strong id="score">0000</strong></div>
-      <div><small>BEST</small><strong id="best">0000</strong></div>
+      <div><small>TIME LEFT</small><strong id="timer">1:30</strong></div>
       <div><small>LIVES</small><strong id="lives" aria-label="3 lives">♥♥♥</strong></div>
       <button id="pause" type="button" disabled>Pause <kbd>Esc</kbd></button>
     </header>
+    <section class="order" id="order" hidden aria-label="Current pizza order">
+      <strong id="recipe"></strong>
+      <ul id="toppings" aria-label="Toppings"></ul>
+      <span id="task" role="status"></span>
+    </section>
     <div class="stage">
       <canvas id="kitchen" width="960" height="580" aria-label="Pizza Panic kitchen arena"></canvas>
       <section class="veil" id="overlay" aria-labelledby="title">

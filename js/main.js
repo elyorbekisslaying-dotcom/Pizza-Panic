@@ -6,8 +6,10 @@
   const { Game, bounds } = PizzaGame;
   const game = new Game();
   const kitchen = PizzaArt.kitchen(bounds, canvas.width, canvas.height);
-  const ui = Object.fromEntries(['score', 'best', 'lives', 'pause', 'overlay', 'title', 'description', 'actions']
+  const ui = Object.fromEntries(['score', 'timer', 'lives', 'pause', 'overlay', 'title', 'description', 'actions',
+    'order', 'recipe', 'toppings', 'task']
     .map(id => [id, document.getElementById(id)]));
+  const { limit, stations, names, total } = PizzaOrders;
   const storageKey = 'pizza-panic.best.v1';
   const keys = new Set();
   const directions = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
@@ -15,6 +17,8 @@
   let previousTime = null;
   let audio;
   let best = 0;
+  let lastClock = '';
+  let lastOrder = '';
 
   try {
     const saved = Number(localStorage.getItem(storageKey));
@@ -29,9 +33,45 @@
       try { localStorage.setItem(storageKey, String(best)); } catch { /* storage can be disabled */ }
     }
     ui.score.textContent = String(game.score).padStart(4, '0');
-    ui.best.textContent = String(best).padStart(4, '0');
     ui.lives.textContent = '♥'.repeat(game.lives) + '♡'.repeat(3 - game.lives);
     ui.lives.setAttribute('aria-label', game.lives + ' lives');
+  }
+
+  function refreshOrder() {
+    const seconds = Math.ceil(Math.max(0, limit - game.elapsed));
+    const clock = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+    if (clock !== lastClock) {
+      ui.timer.textContent = clock;
+      ui.timer.dataset.urgent = String(seconds <= 15);
+      lastClock = clock;
+    }
+    const { recipe, stage, collected, delivered, bakeLeft } = game.orders;
+    if (!recipe) {
+      ui.recipe.textContent = total + '/' + total + ' pizzas served';
+      ui.toppings.replaceChildren();
+      ui.task.textContent = 'All orders complete!';
+      lastOrder = '';
+      return;
+    }
+    const orderKey = [delivered, stage, Object.keys(collected).join()].join('|');
+    if (orderKey !== lastOrder) {
+      ui.recipe.textContent = (delivered + 1) + '/' + total + ' · ' + recipe.name;
+      ui.toppings.replaceChildren(...Object.keys(recipe.toppings).map(kind => {
+        const item = document.createElement('li');
+        item.dataset.collected = String(Boolean(collected[kind]));
+        item.textContent = (collected[kind] ? '✓ ' : '○ ') + names[kind];
+        return item;
+      }));
+      lastOrder = orderKey;
+    }
+    const instructions = {
+      collect: 'Catch the missing toppings',
+      oven: 'Walk to the oven on the left',
+      baking: 'Baking · ' + Math.ceil(bakeLeft) + 's',
+      ready: 'Pizza ready! Return to the oven',
+      carry: 'Take the pizza to pickup on the right'
+    };
+    if (ui.task.textContent !== instructions[stage]) ui.task.textContent = instructions[stage];
   }
 
   function unlockAudio() {
@@ -62,14 +102,19 @@
     keys.clear();
     ui.overlay.hidden = state === 'playing';
     ui.pause.disabled = state !== 'playing';
+    ui.order.hidden = state === 'menu';
     if (state === 'playing') {
       if (ui.overlay.contains(document.activeElement)) document.activeElement.blur();
       return;
     }
     const screens = {
-      menu: ['Pizza <em>Panic!</em>', 'Grab fresh toppings. Dodge spoiled food and bombs.', [['Play', start]]],
+      menu: ['Pizza <em>Panic!</em>', 'Serve three pizzas before closing. Catch toppings, bake, and bring each pizza to pickup. You have 90 seconds and three lives.', [['Play', start]]],
       paused: ['Paused', 'The kitchen can wait.', [['Resume', () => show('playing')], ['Restart', start], ['Main Menu', menu]]],
-      over: ['Game <em>Over</em>', 'Final score ' + game.score + ' · Best score ' + best, [['Play Again', start], ['Main Menu', menu]]]
+      over: ['Game <em>Over</em>', (game.lives ? 'Time’s up!' : 'Out of lives!') +
+        ' Served ' + game.orders.delivered + '/' + total + ' · Score ' + game.score + ' · Best ' + best,
+      [['Play Again', start], ['Main Menu', menu]]],
+      won: ['Kitchen <em>Closed!</em>', 'All three pizzas served! ' + Math.ceil(limit - game.elapsed) +
+        's left · Score ' + game.score + ' · Best ' + best, [['Play Again', start], ['Main Menu', menu]]]
     };
     const [title, description, actions] = screens[state];
     ui.title.innerHTML = title;
@@ -88,12 +133,14 @@
     unlockAudio();
     game.reset();
     refreshScore();
+    refreshOrder();
     show('playing');
   }
 
   function menu() {
     game.reset();
     refreshScore();
+    refreshOrder();
     show('menu');
   }
 
@@ -148,8 +195,10 @@
       if (events.length) {
         events.forEach(sound);
         refreshScore();
-        if (!game.lives) show('over');
       }
+      refreshOrder();
+      if (game.orders.stage === 'won') show('won');
+      else if (!game.lives || game.elapsed >= limit) show('over');
     }
     ctx.drawImage(kitchen, 0, 0);
     if (state === 'menu') {
@@ -157,15 +206,20 @@
       items.forEach((kind, i) => PizzaArt.item(ctx, {
         kind, x: 232 + i * 124, y: 440 + Math.sin(now / 290 + i) * 7, angle: Math.sin(now / 450 + i) * .3
       }));
+      PizzaArt.pizza(ctx, 480, 424, { cheese: true, pepperoni: true, tomato: true, mushroom: true, olive: true }, 1.5);
       PizzaArt.chef(ctx, 480, 158 + Math.sin(now / 270) * 4, 1, 0, false);
     } else {
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top, 10);
       ctx.clip();
+      const order = game.orders;
+      PizzaArt.station(ctx, stations.oven, 'oven', ['oven', 'baking', 'ready'].includes(order.stage), order);
+      PizzaArt.station(ctx, stations.counter, 'counter', order.stage === 'carry', order);
       game.objects.forEach(object => PizzaArt.item(ctx, object));
       const { x, y, facing, stride, protection } = game.player;
       PizzaArt.chef(ctx, x, y, facing, stride, protection > 0 && Math.floor(protection * 14) % 2 === 0);
+      if (order.stage === 'carry') PizzaArt.pizza(ctx, x + 15 * facing, y + 10, order.collected, .56);
       paintEffects();
       if (game.flash > 0) {
         ctx.fillStyle = 'rgba(222, 47, 78, ' + game.flash + ')';
