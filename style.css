@@ -1,0 +1,77 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  color: #fff2d8;
+  background: #231721;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: radial-gradient(ellipse at 50% 20%, #60333e, #231721 75%);
+}
+.cabinet { width: min(960px, 100%, max(520px, calc((100svh - 132px) * 1.655))); }
+.hud, footer { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
+.hud {
+  background: #342233;
+  border: 2px solid #986452;
+  border-radius: 16px 16px 0 0;
+  padding: .55rem clamp(.6rem, 3vw, 1.5rem);
+}
+.hud small { display: block; color: #f2bf9b; font-weight: 850; letter-spacing: .12em; }
+.hud strong { font-variant-numeric: tabular-nums; font-size: clamp(1rem, 3vw, 1.6rem); }
+#lives { color: #ff7773; letter-spacing: .12em; }
+.stage { position: relative; border-inline: 2px solid #986452; }
+canvas { display: block; width: 100%; height: auto; }
+.veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: .5rem;
+  background: #281c2bac;
+}
+.veil[hidden] { display: none; }
+.card {
+  text-align: center;
+  width: min(90%, 420px);
+  padding: clamp(.55rem, 3vw, 1.8rem);
+  background: #fff1d5;
+  color: #472536;
+  border: 3px solid #472536;
+  border-radius: 22px;
+  box-shadow: 0 7px 0 #d08a62, 0 12px 0 #462736;
+}
+h1 { margin: 0; font-size: clamp(1.55rem, 6vw, 4rem); font-weight: 1000; line-height: .98; letter-spacing: -.07em; }
+h1 em { color: #a92c3a; }
+p { margin: .7rem 0; font-weight: 650; }
+#actions { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: center; }
+button {
+  cursor: pointer;
+  border: 2px solid #572638;
+  border-radius: 9px;
+  background: #a92c3a;
+  color: #fff8e9;
+  padding: .42rem .8rem;
+  font: inherit;
+  font-weight: 850;
+  box-shadow: 0 3px #572638;
+}
+button:hover:enabled { background: #8e2437; }
+button:active:enabled { transform: translateY(2px); box-shadow: 0 1px #572638; }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible { outline: 3px solid #ed9d31; outline-offset: 3px; }
+#actions button:first-child { background: #186353; }
+footer {
+  background: #342233;
+  border: 2px solid #986452;
+  border-radius: 0 0 16px 16px;
+  padding: .65rem;
+  flex-wrap: wrap;
+  font-size: .78rem;
+}
+kbd { font: inherit; display: inline-block; padding: 0 .24rem; border-radius: 4px; background: #ffffff21; }
