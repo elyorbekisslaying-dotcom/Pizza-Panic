@@ -19,6 +19,7 @@ const test = (name, fn) => {
 };
 function setup() {
   const g = new Game(() => 0.1);
+  g.countdown = 0;
   g.nextRats = Infinity;
   g.nextVIP = Infinity;
   return g;
@@ -116,7 +117,7 @@ test("three tables, six independent seats; duplicate acceptance and timers", () 
   const c = t.customers[0];
   c.patience = 0.1;
   assert(g.accept(c, 0));
-  assert.equal(c.patience, 150);
+  assert.equal(c.patience, 115);
   c.patience = 42;
   assert(!g.accept(c, 0));
   assert.equal(c.patience, 42);
@@ -132,12 +133,12 @@ test("all stations and all seats have collision-safe routes in both kitchens", (
       for (const p of path) assert(!g.solid(p.x, p.y, 12), s.type);
     }
 });
-test("supplies opening is free; explicit individual purchases and emergency aid", () => {
+test("supplies opening is free; explicit individual purchases; no free aid", () => {
   const g = setup(),
     t = g.teams[0],
     p = at(g, 0, "supply");
   g.interact(p);
-  assert.equal(t.money, 100);
+  assert.equal(t.money, 60);
   for (const k of K.stockKeys) {
     const cash = t.money;
     assert(g.buy(p, k));
@@ -148,10 +149,7 @@ test("supplies opening is free; explicit individual purchases and emergency aid"
   const amount = t.stock.cheese;
   assert(!g.buy(p, "cheese"));
   assert.equal(t.stock.cheese, amount);
-  K.stockKeys.forEach((k) => (t.stock[k] = 0));
-  assert(g.aid(p));
-  assert(!g.aid(p));
-  assert.equal(t.stock.dough, 1);
+  assert.equal(typeof g.aid, "undefined");
 });
 test("assembly spends once, rejects extra/wrong/zero stock; closing and interrupted dough preserve additions", () => {
   const g = setup();
@@ -313,9 +311,9 @@ test("bananas occupy hands, purchase respects food, warning and owner immunity",
     p = at(g, 0, "banana");
   g.interact(p);
   assert.equal(p.hand.kind, "banana");
-  assert.equal(t.money, 75);
+  assert.equal(t.money, 48);
   g.interact(p);
-  assert.equal(t.money, 75);
+  assert.equal(t.money, 48);
   p.x = 500;
   p.y = 600;
   p.faceX = 1;
@@ -449,12 +447,12 @@ test("paid wave cooldown and active cap reject without charging", () => {
   t.money = 1000;
   const p = at(g, 0, "rats");
   g.interact(p);
-  assert.equal(t.money, 920);
+  assert.equal(t.money, 955);
   g.interact(p);
-  assert.equal(t.money, 920);
+  assert.equal(t.money, 955);
   t.ratCD = 0;
   g.interact(p);
-  assert.equal(t.money, 920);
+  assert.equal(t.money, 955);
   assert.equal(g.rats.filter((r) => r.team === 1).length, 4);
 });
 test("VIP accepts both players personally, rejects waiter pickup and rewards one winner", () => {
@@ -464,8 +462,8 @@ test("VIP accepts both players personally, rejects waiter pickup and rewards one
   const o = g.vip;
   for (const id of [0, 1]) {
     const p = g.players[id];
-    p.x = id ? 1060 : 940;
-    p.y = 650;
+    p.x = g.vipSeats[0].approach.x;
+    p.y = g.vipSeats[0].approach.y;
     g.interact(p);
     assert.equal(p.selected, o.id);
     cook(g, id);
@@ -478,7 +476,7 @@ test("VIP accepts both players personally, rejects waiter pickup and rewards one
   assert(!g.teams[1].pickup);
   assert(g.deliver(first, g.teams[0]));
   assert(!g.deliver(second, g.teams[1]));
-  assert.equal(g.teams[0].rep, 20);
+  assert.equal(g.teams[0].rep, 12);
   assert.equal(g.teams[1].rep, 0);
   assert(!g.players[1].hand);
 });

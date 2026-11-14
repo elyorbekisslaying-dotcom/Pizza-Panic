@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Pizza Panic — Kitchen Rivals</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <script defer src="js/art.js"></script>
     <script defer src="js/orders.js"></script>
     <script defer src="js/game.js"></script>
     <script defer src="js/render.js"></script>
+    <script defer src="js/tutorial.js"></script>
     <script defer src="js/main.js"></script>
   </head>
   <body>
@@ -31,6 +33,16 @@
           <div id="description"></div>
           <div id="actions"></div>
         </div>
+      </section>
+      <div id="countdown" hidden></div>
+      <section id="instructor" hidden>
+        <canvas id="mentor" width="90" height="100"></canvas>
+        <div>
+          <b id="lesson-title"></b>
+          <p id="lesson-text"></p>
+        </div>
+        <button id="recover">Restart lesson</button
+        ><button id="leave-tutorial">Menu</button>
       </section>
       <div id="drag-ghost" hidden></div>
     </main>

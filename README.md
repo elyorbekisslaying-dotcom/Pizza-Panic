@@ -1,134 +1,135 @@
 # Pizza Panic — Kitchen Rivals
 
-A local two-player cooking rivalry, built with Canvas, vanilla JavaScript, CSS and generated Web Audio. Open `index.html` in a modern desktop browser. All resources are local: no accounts, keys, database, external API, CDN or build step. The ZIP has `index.html` at its root.
+A two-player local HTML5 cooking rivalry for desktop keyboards. Open `index.html`; all scripts, images, styles and generated sounds are local. No installation, build, external API, account, database, paid assets or game server is required. The distribution ZIP contains `index.html` at its root.
 
-## First launch
+## Menu and practical tutorial
 
-The main menu offers **Play**, **Settings** and a quick guide. Settings controls sound, effects volume and the controls reference. Sound settings are saved locally when browser storage is available. Audio starts after a user gesture.
+The four main entries are **How to Play**, **Tutorial**, **Competitive Mode**, and **Settings**. Competitive Mode unlocks after completing the practical tutorial. Completion is saved as `pizza-tutorial-v1` in localStorage; if storage is unavailable it remains unlocked for the current page session. Repeating or abandoning an already-completed tutorial does not revoke access.
 
-Each chef has a camera and HUD. The two views show one shared 2000 × 1200 world; pass through the central courtyard to visit the rival kitchen or VIP. Neither camera shrinks the entire map to fit the screen. Play on a desktop/laptop, ideally 1366 × 768 or larger, with two people sharing a keyboard.
+Chef Rosa guides 23 short, action-driven lessons in a single training restaurant: movement, entrance sign, greeting, order selection, stock inspection and purchase, all cooking stages, service, waiter, assistant, bananas/dropped food, flour, dirty-table cleanup, rat theft/recovery, and personal VIP service. Stations/targets are highlighted and a direction indicator guides the camera. Lessons advance from actual production-state transitions. They do not grant completion from an acknowledgement button.
+
+Training has generous funds, no random arrivals/events, frozen guest patience and a harmless training chef for gadget practice. **Restart lesson** restores the relevant cooking/staff/gadget lesson after lost dough, burned food, discarded gadgets or another mistake. The rat exercise can repeat its wave if all rats escape or are scared before stealing. Menu remains available. No second person is required to graduate.
+
+Competitive matches, Restart and Rematch begin with **3 → 2 → 1 → GO!**. The world remains frozen for the entire 3.6-second presentation, including the brief GO display: no movement, purchases, patience loss, NPC work or events.
 
 ## Controls
 
-| Action                                                  | Blue       | Red         |
-| ------------------------------------------------------- | ---------- | ----------- |
-| Move                                                    | WASD       | Arrow keys  |
-| Interact / greet / collect / serve                      | E          | Enter       |
-| Rolling-pin swing                                       | F          | Slash `/`   |
-| Place carried banana                                    | Q          | Period `.`  |
-| Dash                                                    | Left Shift | Right Shift |
-| Open nearby Orders, Supplies or Toppings / close window | I          | O           |
-| Window selection                                        | WASD       | Arrow keys  |
-| Activate selected window button                         | E          | Enter       |
-| Close own window                                        | Q or I     | Period or O |
+| Action                                                    | Blue       | Red         |
+| --------------------------------------------------------- | ---------- | ----------- |
+| Move                                                      | WASD       | Arrows      |
+| Interact / greet / collect / serve / flip sign            | E          | Enter       |
+| Hold to clean a dirty own table                           | Hold E     | Hold Enter  |
+| Short rolling-pin swing                                   | F          | Slash `/`   |
+| Use held gadget                                           | Q          | Period `.`  |
+| Dash                                                      | Left Shift | Right Shift |
+| Open nearby Orders / Supplies / Toppings, or close window | I          | O           |
+| Select in own window                                      | WASD       | Arrows      |
+| Activate selected item/button                             | E          | Enter       |
+| Close own window                                          | I or Q     | O or Period |
 
-Escape pauses both restaurants. M toggles sound. Losing browser focus pauses the match. Pause has Resume, Settings, Restart and Main menu. Returning to the main menu discards the previous match. Restart and Rematch clear guests, tasks, items, windows and timers.
+Escape pauses both restaurants. M toggles sound. Losing browser focus pauses play. Settings provides sound, volume and the control reference. Sound starts after a user gesture. Returning to Main menu discards the current match; restart clears orders, reservations, projectiles, visual effects, items and timers.
 
-In an ingredient window, navigate to **Confirm assembly** after adding the recipe. Mouse users can click ingredients or drag them onto the dough. Each player's keyboard only controls their own window. Their chef stops moving while that window is open; the other player and world continue. A hit closes the victim's window and drops their held item.
+Each player has an independent camera, HUD and keyboard window focus. A window stops only its owner's movement. Mouse clicks work in both panels; ingredient drag-and-drop uses pointer coordinates relative to the displayed dough. Cancelled drags spend nothing. Icons show stock, empty ingredients, coins, carried food/gadgets and ability cooldown shading. The held-gadget label shows its use key.
 
-Some physical keyboards limit simultaneous key combinations; real keyboard rollover requires testing on the players' hardware.
+## Restaurants, guests and orders
 
-## Guests, orders and cooking
+Both restaurants share the same 2000 × 1200 world, with mirrored routes, kitchen/dining partitions and a central VIP courtyard. Each has tables for **2, 4 and 6 guests**, with **12 individual seats** and separate approach points. Every guest has their own ID, order and timer. Six appearance variants include smaller children, different adult builds, hair/accessories and coordinated family-like clothing palettes; there is no shared family bill or group AI.
 
-Each restaurant has **three tables and six distinct seats**. Guests enter gradually, about one every 18 seconds, walk to a free seat and wait up to 45 seconds to be greeted. A waiting guest has a question indicator and patience, not an active recipe. Approach that seat and interact to accept its order. Acceptance starts a fresh 150-second cooking allowance; repeated interactions do not refresh it.
+Guests arrive gradually, about one every 18 seconds. They walk in, sit at a free clean seat and wait **30 seconds** to be greeted. The last ten seconds trigger an owner warning. Acceptance starts a separate **115-second** cooking timer; repeat interaction cannot refresh it. A waiter or owner can accept, but only once.
 
-1. Greet a seated guest. This selects their order.
-2. Visit **Dough** with free hands. One dough is consumed; preparation takes 1.2 seconds.
-3. Visit **Toppings**. Add the required ingredients, then choose **Confirm assembly**.
-4. Visit **Oven** to load the raw pizza. Baking takes 3 seconds.
-5. Collect it within 12 seconds after baking or it burns.
-6. Serve the exact guest/seat, or explicitly transfer a baked regular pizza to **Waiter pickup** after hiring a waiter.
+A guest leaving unhappy costs **5 reputation**, clamped at zero, with a sound and compact table/seat warning. They walk back to the entrance. Their order, linked food, windows and NPC reservations are cancelled without returning already-spent ingredients. Successful service also clears linked competing copies and pays only once.
 
-Each successful ingredient addition consumes one unit immediately. Wrong, duplicate and unavailable ingredients are rejected. A cancelled drag consumes nothing. Closing the window preserves additions in that particular dough. Dropped unfinished pizzas preserve their ingredients. Discarding them at **Bin**, expiration or order cancellation does not refund spent ingredients. Confirming assembly creates **raw** food, never ready food.
+**Orders** lists accepted orders, customer name, exact table/seat, recipe icons, time and state: accepted, player preparing, dough/assembly, assistant preparing, raw output, baking, baked ready, pickup and waiter delivery. Baked ready rows are green; raw food is never marked as ready to serve. Rows initially sort by urgency, keep stable IDs while the window is open, and append new orders without reordering the current selection. Completed/cancelled records remain briefly visible.
 
-The **Orders** terminal lists accepted orders, exact table/seat, recipe icons, patience and cooking state. Orders remain active while baking, waiting at pickup or being delivered. Serving or expiration clears the order and all associated food. A chef can prepare only one pizza for the same order at a time.
+## Cooking
 
-| Recipe     | Ingredients                      | Base payment |
-| ---------- | -------------------------------- | ------------ |
-| Margherita | Dough, sauce, cheese             | 40 coins     |
-| Pepperoni  | Dough, sauce, cheese, pepperoni  | 50 coins     |
-| Veggie     | Dough, sauce, cheese, vegetables | 55 coins     |
+1. Greet a waiting guest and select their order, or select an accepted order at Orders.
+2. At **Dough**, interact with empty hands. One dough is consumed; preparation takes 1.2 seconds.
+3. At **Toppings**, add the exact recipe with mouse or keyboard and choose **Confirm assembly**.
+4. Carry the resulting **raw** pizza to **Oven**. Baking takes 3 seconds.
+5. Collect the baked pizza within 12 seconds or it burns.
+6. Personally serve its exact guest, or explicitly hand a baked ordinary pizza to **Waiter pickup**.
 
-Timely service adds a small bonus. Ordinary deliveries award 10 reputation. Expiration costs 5 reputation, down to zero. Start at one star and earn additional stars at 25, 50, 75 and 100 reputation. First to five stars wins; there is no match time limit. Star gains animate and play a short sound.
+Ingredient addition spends one unit immediately. Wrong/duplicate/zero-stock additions are rejected. Closing assembly preserves additions in that dough. Interrupted or dropped food preserves its state. **Bin** discards a carried item; oven interaction removes burned food. Discarding/cancellation never refunds consumed stock.
 
-## Supplies and equipment
+## Economy and victory
 
-Both restaurants start with 100 coins and four of each ingredient. Opening **Supplies** is free; explicitly select Buy to purchase a pack of four:
+Start with **60 coins** and four of each cooking ingredient. Supplies opens for free and sells explicit packs of four.
 
-| Ingredient | Price per pack of four |
-| ---------- | ---------------------- |
-| Dough      | 8                      |
-| Sauce      | 8                      |
-| Cheese     | 10                     |
-| Pepperoni  | 12                     |
-| Vegetables | 12                     |
+| Recipe     | Ingredients                      | Base payment | Ingredient cost per pizza |
+| ---------- | -------------------------------- | -----------: | ------------------------: |
+| Margherita | Dough, sauce, cheese             |           16 |                       6.5 |
+| Pepperoni  | Dough, sauce, cheese, pepperoni  |           20 |                       9.5 |
+| Veggie     | Dough, sauce, cheese, vegetables |           22 |                       9.5 |
 
-Emergency aid is available when coins are below 8 and stock cannot complete any accepted recipe (or any recipe when no order has been accepted). It tops up only missing ingredients for one recipe. Repeating aid while that recipe is possible gives nothing. There is no ingredient resale.
+The speed bonus is at most **3 coins**. Pack prices are dough 8, sauce 8, cheese 10, pepperoni 12, vegetables 12. Ingredient unit costs above divide the four-unit packs; actual purchases require whole packs.
 
-**Storage** is the visible target for rats, separate from the shop. **Bin** discards carried food or a banana. Burned pizzas can be removed by interacting with the oven.
+Ordinary delivery gives **10 reputation**. Start at one star; additional stars arrive at 25, 50, 75 and 100 reputation with a brief animation and sound. First to 100 wins. There is no overall match timer. Sabotage itself grants no reputation.
 
-## Waiter
+| Purchase                      | Coins |
+| ----------------------------- | ----: |
+| Banana                        |    12 |
+| Flour pouch                   |    18 |
+| Striped sabotage sauce bottle |    15 |
+| Rival rat wave                |    45 |
+| One waiter                    |   100 |
+| One assistant                 |   180 |
 
-A waiter costs 140 coins. They physically walk to waiting ordinary guests, accept orders, walk to pickup, collect an explicitly transferred baked pizza, and carry it to its exact recipient. They use the same wall/furniture layout as the chefs through a small navigation grid. Payment occurs only after arrival at the recipient.
+There are **no loans or free emergency supplies**. Zero money alone is not bankruptcy. At the end of each complete simulation update, the game checks whether the kitchen can make any recipe from stock/recoverable ingredients, afford the missing whole packs, or finish an actual paying dish in hands, preparation, oven, pickup, waiter, assistant or owner-only drop. Ingredients carried by returning rats are considered recoverable until the rat escapes. Existing additions to dough count as already paid. Closed signs and temporary absence of guests do not cause defeat.
 
-The waiter cannot cook, collect food from the chef's hands, accept dough/raw/burned food, serve opposing guests, or take/deliver VIP orders. Cancelled jobs release the waiter. Manual service remains available. Order acceptance and payment are idempotent, preventing duplicate rewards.
+If neither stock nor a real unfinished/ready dish offers a path to income, the opponent wins with a reason. Both kitchens becoming insolvent in the same update produce a draw. **Restock before expensive hires**: spending the last coins with no usable ingredients can correctly cause bankruptcy.
 
-## Rivalry and rats
+## Staff
 
-- **Rolling pin:** a short forward swing with a windup and active phase. The direction is locked for the swing, and each swing hits the opponent at most once. Moderate knockback drops carried items. A calm outline marks 2.5 seconds of immunity. Guests and staff are not attack targets; the pin does not kill rats.
-- **Dash:** five-second cooldown; collision still applies. Ability icons shade during cooldown.
-- **Banana, 25 coins:** requires free hands and appears in those hands. Carry it to clear floor and place with Q / Period. It warns for 1.2 seconds, then affects only the opponent. Maximum three installed traps per owner; traps expire after 40 seconds and disappear on triggering.
-- **Dropped food/gadgets:** only the owner can recover them, after a 0.6-second delay. They expire after 45 seconds. Food is also removed if its order expires.
-- **Rats:** four per wave, staggered 0.7 seconds apart. Rats walk from visible burrows to Storage, steal at most one existing ingredient each, and return with the real stolen item shown. They avoid walls and equipment. A chef within 65 pixels scares them back toward the burrow. A scared carrier drops its ingredient once; the owner can recover that stock with interact. A rat carrying nothing creates nothing. Dropped ingredients expire after 60 seconds.
-- **Purchased wave, 80 coins:** targets the rival. A 60-second purchase cooldown and a four-rat cap prevent overlapping waves or an unlimited queue. Unavailable purchases do not charge money. Natural waves begin at 60 seconds and repeat about every 70 seconds, skipping kitchens with active rats.
+**Waiter — 100:** walks at 130 px/s versus the player's 235 px/s, with a 0.65-second service stop. Accepts only own ordinary orders and carries only explicitly transferred baked food from pickup. Committed jobs finish before task changes; invalid jobs clear immediately. At idle, urgent guest/pickup patience chooses the next task, with pickup preference after an acceptance so ready food cannot starve. The waiter never takes food from hands, cooks, handles VIPs or pays before reaching the recipient. Manual acceptance and service remain available.
 
-## VIP
+**Assistant — 180:** reserves one accepted, unclaimed ordinary order and atomically consumes its actual required ingredients. Nine seconds of visible preparation produce one raw pizza at **Assistant**. Collect with interact, then bake and deliver yourself. Output blocks further production until collected. The assistant never accepts orders, bakes, buys, serves or handles VIPs. Status shows Waiting for orders, Missing ingredients, Preparing dough, Assembling or Waiting for pickup. Cancellation releases the reservation without refunding consumed ingredients.
 
-The first VIP appears in the central courtyard after 45 seconds. Both HUDs show the event and each viewport has a direction/distance indicator. The guest initially waits for service for 50 seconds. Each player must personally interact to unlock that same VIP order for themselves. The first acceptance gives the guest a shared 150-second cooking allowance; subsequent acceptance does not reset the clock or monopolize the guest.
+## Signs and sabotage
 
-Either chef can prepare and deliver. The first correct baked delivery awards 120 coins plus a speed bonus and 20 reputation exactly once, clearing the competing preparation. Waiters never handle VIPs.
+**Open / Closed:** personally interact with either restaurant's entrance sign. Closed stops new ordinary arrivals only; existing guests, orders, NPCs and patience continue. Reopening resumes gradual arrivals after eight seconds, without a backlog burst. A flip has a 0.3-second interaction animation; rival flips have an eight-second cooldown, while the owner can restore the sign promptly. Holding the key does not repeatedly flip it.
 
-## Deferred mechanics
+**Banana:** appears in free hands after purchase. Use Q / Period on clear floor, with a 1.2-second arming warning. Only the rival slips, dropping carried food and receiving brief stun/knockback and 2.5 seconds of immunity. Maximum three installed traps per owner; each expires after 40 seconds or triggers once. Owner-only food/gadget recovery starts after 0.6 seconds; drops expire after 45 seconds or cancellation of their order.
 
-Assistant hiring/AI and random fires are removed. There is no inert assistant or extinguisher purchase. Bin remains a separate discard station. Future fire work may use a carried extinguisher, directional moving spray particles and extinguishing on actual contact; matches are only a possible future sabotage proposal, not part of this build.
+**Flour:** a distinct carried pouch. Q / Period throws forward at 400 px/s, with a 0.9-second maximum flight and collision against walls/equipment. Only the opponent can be hit. Flour splatters cover only that viewport, falling/fading over 2.6 seconds; movement, carried items and pause stay usable. A six-second repeat-hit guard prevents stacking. There is no flour stun, knockback or item loss.
 
-## Development and verification
+**Sabotage sauce:** the striped bottle is a separate gadget, not cooking stock. Carry it to a completely unoccupied rival ordinary table, face it and use Q / Period. Incoming assigned guests also protect their table. One bottle dirties one table; no VIP targeting, repeat staining or invalid-use consumption. At most one dirty table per restaurant. Dirty tables exclude exactly their capacity from new seating. The owner holds interact nearby for 2.5 seconds to clean; release/interruption resets progress. A clean table has ten seconds of protection. Tutorial uses an own practice table instead of a rival's.
 
-Use the existing checkout; no installation or build is required to play. For browser development:
+**Rolling pin:** a short directional swing, locked direction, visible windup and active hit phase, at most one result per swing. Moderate knockback drops carried food. Moderate opacity changes mark immunity, never making the chef completely invisible. Customers/staff are not targets. Rats are scared by proximity, not killed.
+
+**Rats:** four staggered rats per wave, following collision-safe paths from burrow to Storage, stealing at most one existing ingredient each and returning with its visible item. A nearby chef scares them home; a carrier drops the stolen ingredient once. Only its owner can recover it with interact; an empty rat creates nothing. Natural waves begin at 60 seconds and repeat about every 70 seconds. Purchased rival waves have a 60-second cooldown, four-rat cap and no queue; unavailable purchases charge nothing. Rats never steal money. Dropped stock expires after 60 seconds.
+
+## Four-seat VIP courtyard
+
+One event brings 1–4 independent VIP guests: probabilities **40% / 35% / 17% / 8%**. Each has a unique seat, ID, order, timer and payment. A gold banner in both views announces the count; sound and direction guidance accompany it without pausing.
+
+Each player must personally accept each guest's order. First acceptance starts a shared 115-second allowance; another player's acceptance does not monopolize or reset it. First correct personal baked delivery pays **40 + up to 3 coins and 12 reputation** exactly once, clearing only competing food for that guest. Other VIPs continue independently. Staff never handle VIPs. Initial waiting allowance is 50 seconds. The first event is at 45 seconds; later groups wait until the previous group has cleared.
+
+## Verification and limits
+
+Use the existing checkout. No build is required. Optional browser development server:
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Run the dependency-free simulation tests:
+Dependency-free simulation tests (Node):
 
 ```sh
 node tests/game.test.cjs
+node tests/jam.test.cjs
+node tests/tutorial.test.cjs
+node tests/economy.test.cjs
 ```
 
-**21 regression groups passed.** They cover both cooking cycles, six independent seats and gradual occupancy, acceptance timing, collision-safe routes, item purchases/aid, assembly accounting and interruption, walking waiter acceptance/delivery/cancellation, rejected raw/burned/wrong food, drops, bananas, directional active-frame strikes, rat theft/fear/recovery, wave limits, contested VIPs, simultaneous input, terminal states, victory and reset. A complete blue cooking route uses simulated movement and collision, without teleporting between stations. Other isolated tests position actors as fixtures to exercise specific interactions; no test grants reputation to manufacture a win.
-
-Optional browser automation uses Playwright and Chromium already provided by the cloud environment (these are development tools, not game dependencies):
+Browser tests use the cloud environment's existing Playwright and Chromium, not runtime game dependencies:
 
 ```sh
-node tests/browser.test.cjs
+GAME_URL=http://127.0.0.1:8000/ node tests/browser.test.cjs
 ```
 
-Set `GAME_URL`, `CHROMIUM_PATH` or `ARTIFACT_DIR` to override the defaults (local port 8000, `/usr/bin/chromium`, and the system temporary directory). The suite launches headless Chromium with `--no-sandbox`, as required by this managed test container; this is not a game startup requirement. The `?test=1` URL explicitly enables a development-only hook; normal play omits it.
+`CHROMIUM_PATH` and `ARTIFACT_DIR` optionally override the browser and screenshot output. The browser harness uses `--no-sandbox` for this managed container, not as a game startup requirement. `?test=1` explicitly exposes the development hook; ordinary players omit it.
 
-**Browser checks passed at 1366 × 768 and 1920 × 1080:** clean menu, actual audio gain/mute settings, both movement inputs, independent window focus, free shop opening/paid purchase, both keyboard assembly paths, cancelled and successful pointer drags across resize, both baked deliveries, terminal selection, ten actual deliveries through victory, Rematch, six seated guests, pause/settings/restart/main menu, and zero page errors. Menu, assembly, gameplay and six-seat screenshots were visually inspected. Browser fixtures position chefs near stations and accelerate simulation for long waits; pointer/keyboard actions and cooking/payment transitions use the actual application logic.
+See [VALIDATION.md](VALIDATION.md) for executed scenarios, measured economic outcomes and limitations. Browser fixtures sometimes position chefs at stations or accelerate waits; actual UI actions and state transitions remain in use. A separate tutorial regression walks real paths with collision through the complete training sequence.
 
-Direct `file://` navigation was attempted but the managed Chromium policy rejected it with `ERR_BLOCKED_BY_ADMINISTRATOR`. HTTP browser tests passed. This build uses only local classic scripts/styles and no fetching/module imports, so it is packaged for direct file opening, but direct-file execution in an unrestricted browser still needs confirmation. Audible sound quality, two-person hardware rollover, subjective readability and long-match balance need a human playtest. These are not claimed as completed.
-
-Investigation of the old suspected raw-pizza reward did not reproduce an unbaked payment: its shared reward function already checked `stage === 'ready'`. The old waiter did, however, complete delivery by a timer instead of actual arrival. That path has been replaced, and tests cover all new reward entry points.
-
-## Files and distribution
-
-- `js/orders.js`: recipes, controls, prices and mirrored restaurant layout.
-- `js/game.js`: shared simulation, navigation, state transitions and economy.
-- `js/art.js`: procedural character and shared item/icon artwork.
-- `js/render.js`: world rendering and independent player cameras.
-- `js/main.js`: input, local UI focus, drag-and-drop, settings, sound and fixed-step loop.
-- `tests/game.test.cjs`, `tests/browser.test.cjs`: simulation and browser regressions.
-
-For itch.io, upload the ZIP as an HTML game and allow fullscreen. No external resources are required. Desktop keyboard play is intended; this is not a touch-control/mobile release.
+No fires, oil, cheese traps, bouncing dough, multiple staff per role, debts or unrelated mechanics were added. The game remains intended for two people on a desktop keyboard, not mobile touch controls.

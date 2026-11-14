@@ -41,8 +41,8 @@
       (id ? "Red" : "Blue") +
       ' kitchen viewport"></canvas><div class="toast" role="status" hidden></div><section class="panel" hidden></section></div><div class="controls">' +
       (id
-        ? "Arrows move · Enter interact · / swing · . trap · RShift dash · O window"
-        : "WASD move · E interact · F swing · Q trap · LShift dash · I window") +
+        ? "Arrows move · Enter interact · / swing · . use item · RShift dash · O window"
+        : "WASD move · E interact · F swing · Q use item · LShift dash · I window") +
       "</div>";
     players.append(el);
     return {
@@ -54,6 +54,32 @@
       signature: "",
     };
   });
+  let tutorialComplete = false,
+    helpReturn = "menu";
+  try {
+    tutorialComplete = localStorage.getItem("pizza-tutorial-v1") === "complete";
+  } catch {}
+  const mentor = document.getElementById("mentor").getContext("2d");
+  PizzaArt.chef(mentor, 45, 52, 1, 0, false, "#79b59b");
+  function startTutorial() {
+    unlock();
+    new KitchenTutorial(game, () => {
+      tutorialComplete = true;
+      try {
+        localStorage.setItem("pizza-tutorial-v1", "complete");
+      } catch {}
+      show("graduated");
+    });
+    views.forEach((v) => (v.signature = ""));
+    show("play");
+  }
+  document.getElementById("recover").onclick = () => {
+    game.tutorial?.recover();
+    keys.clear();
+    clearDrag();
+    refresh();
+  };
+  document.getElementById("leave-tutorial").onclick = () => show("menu");
   const brand = document.getElementById("brand").getContext("2d");
   PizzaArt.chef(brand, 65, 65, 1, 3, false, Kitchen.colors[0]);
   PizzaArt.chef(brand, 295, 65, -1, -3, false, Kitchen.colors[1]);
@@ -92,6 +118,11 @@
         star: 990,
         win: 1200,
         dash: 300,
+        count: 420,
+        go: 840,
+        lost: 140,
+        warning: 380,
+        flour: 210,
       }[type] || 440;
     gain.gain.setValueAtTime(0.09, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
@@ -120,7 +151,15 @@
     accumulator = 0;
     clearDrag();
     overlay.hidden = next === "play";
-    match.hidden = ["menu", "settings", "help"].includes(next);
+    match.hidden = ["menu", "settings", "help", "graduated"].includes(next);
+    document.getElementById("instructor").hidden = !(
+      game.mode === "tutorial" && next === "play"
+    );
+    document.body.classList.toggle(
+      "tutorial",
+      game.mode === "tutorial" && next !== "menu",
+    );
+    document.getElementById("countdown").hidden = true;
     const title = document.getElementById("title"),
       desc = document.getElementById("description");
     if (next === "play") {
@@ -135,7 +174,15 @@
       desc.innerHTML =
         "<p>Two chefs. One keyboard. A race to five stars.</p><p>Greet guests, craft pizzas, and outcook your rival.</p>";
       buttons([
-        ["Play", start],
+        [
+          "How to Play",
+          () => {
+            helpReturn = "menu";
+            show("help");
+          },
+        ],
+        ["Tutorial", startTutorial],
+        ["Competitive Mode", start],
         [
           "Settings",
           () => {
@@ -143,7 +190,23 @@
             show("settings");
           },
         ],
-        ["Quick guide", () => show("help")],
+      ]);
+      const competitive = [
+        ...document.querySelectorAll("#actions button"),
+      ].find((b) => b.textContent === "Competitive Mode");
+      competitive.disabled = !tutorialComplete;
+      if (!tutorialComplete)
+        desc.innerHTML +=
+          '<p class="lock-note">Complete the practical Tutorial to unlock Competitive Mode.</p>';
+    }
+    if (next === "graduated") {
+      title.textContent = "Ready for the rivalry!";
+      desc.innerHTML =
+        "<p>You cooked, served, hired staff and tried sabotage. Competitive Mode is unlocked.</p><p>First to 100 reputation wins. If no affordable recipe or recoverable paying food remains, bankruptcy ends the match. No free supplies or loans.</p><p>Red uses Arrows, Enter, /, Period and Right Shift. Both players use the same systems.</p>";
+      buttons([
+        ["Competitive Mode", start],
+        ["Repeat Tutorial", startTutorial],
+        ["Main menu", () => show("menu")],
       ]);
     }
     if (next === "settings") {
@@ -167,15 +230,21 @@
         sound("ready");
       };
       buttons([
-        ["View controls", () => show("help")],
+        [
+          "View controls",
+          () => {
+            helpReturn = "settings";
+            show("help");
+          },
+        ],
         ["Back", () => show(settingsReturn)],
       ]);
     }
     if (next === "help") {
       title.textContent = "From dough to five stars";
       desc.innerHTML =
-        '<div class="help"><p><b>Blue:</b> WASD move · E interact · F rolling pin · Q place banana · Left Shift dash · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · / rolling pin · . place banana · Right Shift dash · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task.</p><p>Supplies sells four of each ingredient separately. A hired waiter takes orders and carries baked regular pizzas from Waiter pickup. VIP is in the shared central courtyard. Escape pauses everyone; M toggles sound.</p></div>';
-      buttons([["Back", () => show("settings")]]);
+        '<div class="help"><p><b>Blue:</b> WASD move · E interact · F rolling pin · Q use held gadget · Left Shift dash · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · / rolling pin · . place banana · Right Shift dash · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task.</p><p>Supplies sells packs of four. Waiter (100) takes orders and carries baked regular pizzas from pickup. Assistant (180) reserves one accepted regular order and assembles raw food in nine seconds; you still bake and serve.</p><p>Q / Period uses your held gadget: banana (12), flour throw (18), or striped sabotage sauce (15). Dirty empty rival tables need 2.5 seconds of held interaction to clean. Flip either entrance sign in person; Closed stops new guests.</p><p>Each VIP in the central courtyard needs personal service: 40 coins and 12 reputation. First to 100 reputation wins. Bankruptcy means no affordable recipe or recoverable paying food remains, not merely zero coins. No free supplies. Escape pauses everyone; M toggles sound.</p></div>';
+      buttons([["Back", () => show(helpReturn)]]);
     }
     if (next === "pause") {
       title.textContent = "Kitchen break";
@@ -189,24 +258,32 @@
             show("settings");
           },
         ],
-        ["Restart", start],
+        [
+          "Restart",
+          () => (game.mode === "tutorial" ? startTutorial() : start()),
+        ],
         ["Main menu", () => show("menu")],
       ]);
     }
     if (next === "win") {
       title.textContent =
-        (game.winner ? "Red" : "Blue") + " wins — five stars!";
-      desc.textContent = game.teams
-        .map(
-          (t) =>
-            (t.id ? "Red" : "Blue") +
-            ": " +
-            t.served +
-            " served, " +
-            t.rep +
-            " reputation",
-        )
-        .join(" · ");
+        game.winner === -1
+          ? "Draw — both kitchens bankrupt"
+          : (game.winner ? "Red" : "Blue") + " wins!";
+      desc.textContent =
+        game.resultReason +
+        " · " +
+        game.teams
+          .map(
+            (t) =>
+              (t.id ? "Red" : "Blue") +
+              ": " +
+              t.served +
+              " served, " +
+              t.rep +
+              " reputation",
+          )
+          .join(" · ");
       buttons([
         ["Rematch", start],
         ["Main menu", () => show("menu")],
@@ -214,7 +291,8 @@
     }
   }
   function start() {
-    game.reset();
+    if (!tutorialComplete) return false;
+    game.reset("competitive");
     views.forEach((v) => (v.signature = ""));
     unlock();
     show("play");
@@ -225,7 +303,7 @@
     if (p.panel === "supply")
       return [
         ...Kitchen.stockKeys.map((key) => ({ action: "buy", key })),
-        { action: "aid" },
+
         { action: "close" },
       ];
     if (p.panel === "assembly")
@@ -236,22 +314,38 @@
         { action: "confirm" },
         { action: "close" },
       ];
-    if (p.panel === "terminal")
+    if (p.panel === "terminal") {
+      const active = [...t.customers, ...game.vips]
+        .filter((o) => game.accepted(o, p.id))
+        .sort((a, b) => a.patience - b.patience);
+      p.orderList = (p.orderList || []).filter((id) =>
+        active.some((o) => o.id === id),
+      );
+      for (const o of active)
+        if (!p.orderList.includes(o.id)) p.orderList.push(o.id);
       return [
-        ...t.customers
-          .filter((o) => game.accepted(o, p.id))
-          .map((o) => ({ action: "select", key: o.id })),
-        ...(game.accepted(game.vip, p.id)
-          ? [{ action: "select", key: game.vip.id }]
-          : []),
+        ...(p.orderList || [])
+          .filter((id) => game.accepted(game.order(id), p.id))
+          .map((key) => ({ action: "select", key })),
+        { action: "inspect" },
         { action: "close" },
       ];
+    }
     return [];
   }
   function action(p, a) {
-    if (state !== "play" || p.stun || !p.panel) return;
+    if (state !== "play" || !game.active() || p.stun || !p.panel) return;
     if (a.action === "buy") game.buy(p, a.key);
-    if (a.action === "aid") game.aid(p);
+    if (a.action === "inspect") {
+      game.record("inspect", { id: p.id });
+      game.say(
+        p,
+        "Stock: " +
+          Kitchen.stockKeys
+            .map((k) => k + " " + game.teams[p.id].stock[k])
+            .join(" · "),
+      );
+    }
     if (a.action === "add") game.addIngredient(p, a.key);
     if (a.action === "confirm") game.assemble(p);
     if (a.action === "select") game.select(p, Number(a.key));
@@ -261,7 +355,8 @@
   const carriedIcons = new Map();
   function carriedIcon(item) {
     if (!item) return icon("order");
-    if (item.kind === "banana") return icon("banana");
+    if (["banana", "flour", "bottle"].includes(item.kind))
+      return icon(item.kind);
     const key = item.stage + ":" + (item.added || []).join(",");
     if (!carriedIcons.has(key)) {
       const canvas = document.createElement("canvas");
@@ -278,6 +373,18 @@
     );
   }
   function refresh() {
+    const instructor = document.getElementById("instructor");
+    instructor.hidden = !(game.mode === "tutorial" && state === "play");
+    if (game.tutorial && !game.tutorial.done) {
+      document.getElementById("lesson-title").textContent =
+        "Chef Rosa · Lesson " +
+        (game.tutorial.index + 1) +
+        " / " +
+        game.tutorial.steps.length;
+      document.getElementById("lesson-text").textContent =
+        game.tutorial.step.text;
+    }
+
     for (const p of game.players) {
       const v = views[p.id],
         t = game.teams[p.id],
@@ -300,11 +407,15 @@
         (t.rep === 100 ? 25 : t.rep % 25) +
         '" aria-label="Progress to next star"></progress><small>' +
         t.rep +
-        '/100</small></div><div class="inventory">' +
+        '/100</small><span class="open-badge">' +
+        (t.open ? "OPEN" : "CLOSED") +
+        '</span></div><div class="inventory">' +
         Kitchen.stockKeys
           .map(
             (k) =>
-              '<div class="stock ' +
+              '<button data-stock="' +
+              k +
+              '" class="stock ' +
               (!t.stock[k] ? "empty" : "") +
               '" title="' +
               k +
@@ -313,12 +424,14 @@
               icon(k) +
               "<span>" +
               t.stock[k] +
-              "</span></div>",
+              "</span></button>",
           )
           .join("") +
         '</div><div class="task-row"><span class="hand">' +
         carriedIcon(p.hand) +
-        (p.hand?.kind === "banana" ? "Banana" : p.hand?.stage || "Free hands") +
+        (["banana", "flour", "bottle"].includes(p.hand?.kind)
+          ? p.hand.kind + " [" + (p.id ? "." : "Q") + "]"
+          : p.hand?.stage || "Free hands") +
         '</span><span class="task" title="' +
         (o ? Kitchen.recipes[o.recipe].name : "Greet a waiting guest") +
         '">' +
@@ -346,14 +459,24 @@
         v.hud.innerHTML = hudHtml;
         v.hudSignature = hudHtml;
       }
-      v.toast.hidden = p.messageTime <= 0;
-      v.toast.textContent = p.message;
+      v.toast.hidden = p.messageTime <= 0 && !t.alerts.length;
+      v.toast.textContent = t.alerts.length
+        ? t.alerts.map((a) => a.text).join(" / ")
+        : p.message;
       v.panel.hidden = !p.panel;
       if (!p.panel) {
         v.signature = "";
         continue;
       }
       const list = choices(p);
+      if (p.panel === "terminal" && p.focusOrder) {
+        const index = list.findIndex((a) => a.key === p.focusOrder);
+        if (index >= 0) p.cursor = index;
+        else {
+          p.cursor = list.length - 1;
+          p.focusOrder = null;
+        }
+      }
       p.cursor = Math.min(p.cursor, list.length - 1);
       const btn = (label, a, i) =>
         '<button data-action="' +
@@ -367,21 +490,20 @@
         "</button>";
       let content = "";
       if (p.panel === "supply") {
-        content =
-          Kitchen.stockKeys
-            .map(
-              (k, i) =>
-                '<div class="shop-row">' +
-                icon(k) +
-                '<span class="details"><b>' +
-                k +
-                "</b><small>In stock: " +
-                t.stock[k] +
-                " · pack of 4</small></span>" +
-                btn("Buy · " + Kitchen.prices[k], list[i], i) +
-                "</div>",
-            )
-            .join("") + btn("Emergency aid", list[5], 5);
+        content = Kitchen.stockKeys
+          .map(
+            (k, i) =>
+              '<div class="shop-row">' +
+              icon(k) +
+              '<span class="details"><b>' +
+              k +
+              "</b><small>In stock: " +
+              t.stock[k] +
+              " · pack of 4</small></span>" +
+              btn("Buy · " + Kitchen.prices[k], list[i], i) +
+              "</div>",
+          )
+          .join("");
       }
       if (p.panel === "terminal") {
         content =
@@ -390,15 +512,21 @@
             .map((a, i) => {
               const o = game.order(Number(a.key));
               return (
-                '<div class="order-row">' +
+                '<div class="order-row ' +
+                (game.status(o, p.id).startsWith("Ready")
+                  ? "ready-order"
+                  : "") +
+                '">' +
                 icon("order") +
                 '<span class="details"><b>' +
                 (o.team === -1
                   ? "VIP"
                   : "T" +
-                    (Math.floor(o.seat / 2) + 1) +
+                    (t.seats[o.seat].table + 1) +
                     " / Seat " +
-                    ((o.seat % 2) + 1)) +
+                    t.seats[o.seat].place) +
+                " · " +
+                (o.name || "Guest") +
                 " · " +
                 Kitchen.recipes[o.recipe].name +
                 "</b><small>" +
@@ -413,6 +541,11 @@
               );
             })
             .join("") || "<p>No accepted orders. Greet a guest first.</p>";
+        content +=
+          btn("Inspect stock", list[list.length - 2], list.length - 2) +
+          t.history
+            .map((h) => "<p>" + h.name + " · " + h.label + "</p>")
+            .join("");
       }
       if (p.panel === "assembly" && p.hand) {
         content =
@@ -494,10 +627,29 @@
           : "";
   }
   for (const v of views) {
+    v.hud.addEventListener("click", (e) => {
+      if (state === "play" && e.target.closest("[data-stock]")) {
+        game.record("inspect", { id: Number(v.el.dataset.player) });
+        game.say(
+          game.players[Number(v.el.dataset.player)],
+          "Ingredients are spent only when added. Zero stock is marked red.",
+        );
+      }
+    });
+
     v.panel.addEventListener("click", (e) => {
       const b = e.target.closest("[data-action]");
       if (b?.dataset.action === "add" && performance.now() < suppressClick)
         return;
+      if (b?.dataset.action === "select" && v.pendingSelect) {
+        const id = v.pendingSelect;
+        v.pendingSelect = null;
+        action(game.players[Number(v.el.dataset.player)], {
+          action: "select",
+          key: id,
+        });
+        return;
+      }
       if (b)
         action(game.players[Number(v.el.dataset.player)], {
           action: b.dataset.action,
@@ -505,6 +657,8 @@
         });
     });
     v.panel.addEventListener("pointerdown", (e) => {
+      const select = e.target.closest('[data-action="select"]');
+      v.pendingSelect = select?.dataset.key || null;
       const b = e.target.closest('[data-action="add"]');
       if (!b || state !== "play") return;
       drag = {
@@ -563,11 +717,12 @@
       }
       return;
     }
-    if (state !== "play") return;
+    if (state !== "play" || !game.active()) return;
     if (reserved.has(e.code)) e.preventDefault();
     if (e.repeat) return;
     Kitchen.controls.forEach((c, id) => {
       const p = game.players[id];
+      if (game.mode === "tutorial" && id === 1) return;
       if (!Object.values(c).includes(e.code)) return;
       if (p.panel) {
         const list = choices(p);
@@ -577,6 +732,8 @@
           p.cursor = (p.cursor + 1) % list.length;
         else if (e.code === c.interact) action(p, list[p.cursor]);
         else if (e.code === c.panel || e.code === c.trap) p.panel = null;
+        p.focusOrder =
+          list[p.cursor]?.action === "select" ? list[p.cursor].key : null;
         refresh();
         return;
       }
@@ -589,7 +746,7 @@
         else game.say(p, "Approach Orders, Supplies or Toppings");
       }
       if (e.code === c.punch) game.punch(p);
-      if (e.code === c.trap) game.trap(p);
+      if (e.code === c.trap) game.useItem(p);
       if (e.code === c.dash) game.dash(p);
       refresh();
     });
@@ -607,10 +764,13 @@
       const input = Kitchen.controls.map((c) => ({
         x: Number(keys.has(c.right)) - Number(keys.has(c.left)),
         y: Number(keys.has(c.down)) - Number(keys.has(c.up)),
+        interact: keys.has(c.interact),
       }));
+      if (game.mode === "tutorial") input[1] = game.tutorial?.input() || {};
       while (accumulator >= 1 / 120) {
         game.step(1 / 120, input);
-        accumulator -= 1 / 120;
+        accumulator = Math.max(0, accumulator - 1 / 120);
+        if (state !== "play") break;
         if (game.winner !== null) {
           show("win");
           break;
@@ -619,8 +779,13 @@
       game.sounds.splice(0).forEach(sound);
       if (drag && game.players[drag.id].panel !== "assembly") clearDrag();
     }
+    const count = document.getElementById("countdown");
+    count.hidden = state !== "play" || game.countdown <= 0;
+    count.textContent =
+      game.countdown > 0.6 ? Math.ceil(game.countdown - 0.6) : "GO!";
     if (!match.hidden) {
       views.forEach((v, id) => {
+        if (game.mode === "tutorial" && id === 1) return;
         const rect = v.canvas.getBoundingClientRect();
         if (
           v.canvas.width !== Math.round(rect.width) ||
@@ -642,6 +807,10 @@
   if (location.search.includes("test=1"))
     window.rivalTest = {
       game,
+      startTutorial,
+      get tutorialComplete() {
+        return tutorialComplete;
+      },
       start,
       show,
       refresh,

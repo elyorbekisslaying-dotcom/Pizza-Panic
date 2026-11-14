@@ -341,6 +341,38 @@ const GameIcons = (() => {
     c.translate(x, y);
     c.scale(scale, scale);
     switch (key) {
+      case "flour":
+        poly(
+          c,
+          [
+            [-13, -12],
+            [10, -12],
+            [17, 13],
+            [8, 19],
+            [-12, 17],
+            [-17, 8],
+          ],
+          "#f5eee0",
+        );
+        box(c, -10, -16, 20, 6, 2, "#bca280", ink);
+        box(c, -9, -2, 18, 10, 2, "#8ca6b0");
+        break;
+      case "bottle":
+        box(c, -10, -10, 20, 30, 4, "#b73c3a", ink);
+        box(c, -6, -22, 12, 15, 2, "#e8b464", ink);
+        poly(
+          c,
+          [
+            [-10, -4],
+            [10, 6],
+            [10, 13],
+            [-10, 3],
+          ],
+          "#f8e8b2",
+          null,
+        );
+        box(c, -6, -25, 12, 5, 2, "#492d3b");
+        break;
       case "dough":
         oval(c, 0, 2, 19, 14, "#f4d79c", ink);
         oval(c, -5, -2, 7, 3, "#fff0c5");

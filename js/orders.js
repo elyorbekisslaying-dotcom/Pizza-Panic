@@ -1,15 +1,15 @@
 "use strict";
 const Kitchen = (() => {
   const recipes = [
-    { name: "Margherita", price: 40, items: ["dough", "sauce", "cheese"] },
+    { name: "Margherita", price: 16, items: ["dough", "sauce", "cheese"] },
     {
       name: "Pepperoni",
-      price: 50,
+      price: 20,
       items: ["dough", "sauce", "cheese", "pepperoni"],
     },
     {
       name: "Veggie",
-      price: 55,
+      price: 22,
       items: ["dough", "sauce", "cheese", "vegetables"],
     },
   ];
@@ -48,6 +48,10 @@ const Kitchen = (() => {
       ["serving", 340, 330],
       ["bin", 540, 330],
       ["storage", 740, 300],
+      ["assistant", 740, 140],
+      ["flour", 140, 600],
+      ["bottle", 340, 600],
+      ["sign", 650, 1060],
       ["supply", 140, 1040],
       ["banana", 340, 1040],
       ["rats", 540, 1040],
@@ -61,29 +65,40 @@ const Kitchen = (() => {
       h: 60,
     }));
   const tables = (id) =>
-    [180, 420, 660].map((x, index) => ({
+    [2, 4, 6].map((capacity, index) => ({
       type: "table",
       team: id,
       index,
-      x: mirror(id, x),
+      capacity,
+      x: mirror(id, [140, 370, 660][index]),
       y: 810,
-      w: 90,
+      w: capacity * 35 + 20,
       h: 64,
+      dirty: false,
+      protectedUntil: 0,
     }));
-  const seats = (id) =>
-    tables(id).flatMap((t) =>
-      [-1, 1].map((side, i) => ({
-        type: "seat",
-        team: id,
-        seat: t.index * 2 + i,
-        table: t.index,
-        x: t.x,
-        y: t.y + side * 65,
-        w: 32,
-        h: 30,
-        approach: { x: t.x + (id ? -65 : 65), y: t.y + side * 65 },
-      })),
+  const seats = (id) => {
+    let number = 0;
+    return tables(id).flatMap((t) =>
+      [-1, 1].flatMap((side) =>
+        Array.from({ length: t.capacity / 2 }, (_, i) => {
+          const x = t.x + (i - (t.capacity / 2 - 1) / 2) * 70;
+          return {
+            type: "seat",
+            team: id,
+            seat: number++,
+            table: t.index,
+            place: (side === -1 ? 0 : t.capacity / 2) + i + 1,
+            x,
+            y: t.y + side * 65,
+            w: 32,
+            h: 30,
+            approach: { x, y: t.y + side * 115 },
+          };
+        }),
+      ),
     );
+  };
   return {
     recipes,
     stockKeys,
@@ -96,6 +111,13 @@ const Kitchen = (() => {
     width: 2000,
     height: 1200,
     prices: { dough: 8, sauce: 8, cheese: 10, pepperoni: 12, vegetables: 12 },
-    purchases: { banana: 25, rats: 80, waiter: 140 },
+    purchases: {
+      banana: 12,
+      flour: 18,
+      bottle: 15,
+      rats: 45,
+      waiter: 100,
+      assistant: 180,
+    },
   };
 })();

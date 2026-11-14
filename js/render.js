@@ -14,8 +14,8 @@ const RivalRenderer = (() => {
   }
   function food(c, item, x, y, scale = 1) {
     if (!item) return;
-    if (item.kind === "banana") {
-      GameIcons.draw(c, "banana", x, y, scale);
+    if (["banana", "flour", "bottle"].includes(item.kind)) {
+      GameIcons.draw(c, item.kind, x, y, scale);
       return;
     }
     if (item.kind === "ingredient") {
@@ -77,12 +77,50 @@ const RivalRenderer = (() => {
     bin: "Bin",
     storage: "Storage",
     terminal: "Orders",
-    banana: "Banana · 25",
-    rats: "Rat wave · 80",
-    waiter: "Waiter · 140",
+    banana: "Banana · 12",
+    flour: "Flour · 18",
+    bottle: "Sabotage sauce · 15",
+    assistant: "Assistant · 180",
+    sign: "Entrance sign",
+    rats: "Rat wave · 45",
+    waiter: "Waiter · 100",
   };
   function station(c, s, t) {
     const { x, y, type } = s;
+    if (type === "sign") {
+      box(c, x - 4, y - 28, 8, 60, 3, "#9c7057", ink);
+      c.save();
+      c.translate(x, y);
+      c.rotate(t.signFX > 0 ? Math.sin(t.signFX * 20) * 0.15 : 0);
+      box(c, -38, -26, 76, 42, 6, t.open ? "#4e9976" : "#aa555c", ink);
+      text(c, t.open ? "OPEN" : "CLOSED", 0, 0, 16, "#fff2d6");
+      c.restore();
+      return;
+    }
+    if (type === "assistant") {
+      PizzaArt.chef(
+        c,
+        x,
+        y - 25,
+        1,
+        t.assistant?.job ? Math.sin(t.assistant.job.left * 12) * 3 : 0,
+        false,
+        "#78aa8b",
+      );
+      box(c, x - 38, y, 76, 30, 6, "#dec4a0", ink);
+      if (t.assistantOutput) food(c, t.assistantOutput, x, y + 10, 0.7);
+      if (t.assistant?.job)
+        bar(c, x - 35, y + 20, 70, 1 - t.assistant.job.left / 9);
+      text(
+        c,
+        t.assistant ? t.assistant.state : "Assistant · 180",
+        x,
+        y + 52,
+        11,
+      );
+      return;
+    }
+
     oval(c, x, y + 29, 43, 10, "#452b3730");
     box(c, x - 38, y - 30, 76, 60, 8, Kitchen.colors[t.id], ink);
     box(c, x - 34, y - 26, 68, 45, 6, "#f1d6b1", ink);
@@ -128,7 +166,8 @@ const RivalRenderer = (() => {
       oval(c, x, y, 28, 17, "#fff1d2", ink);
       if (t.pickup) food(c, t.pickup, x, y, 0.75);
     }
-    if (type === "banana") GameIcons.draw(c, "banana", x, y);
+    if (["banana", "flour", "bottle"].includes(type))
+      GameIcons.draw(c, type, x, y);
     if (type === "rats") rat(c, { x, y, phase: "in" }, 0);
     if (type === "waiter") person(c, x, y - 5, "#9272a1");
     box(c, x - 66, y + 34, 132, 24, 5, "#483141");
@@ -160,6 +199,9 @@ const RivalRenderer = (() => {
     c.restore();
   }
   function chef(c, p, time) {
+    if (p.hidden) return;
+    c.save();
+    if (p.immune) c.globalAlpha = Math.floor(time * 5) % 2 ? 0.58 : 1;
     if (p.immune) {
       c.strokeStyle = "#fff8c8";
       c.lineWidth = 4;
@@ -186,6 +228,17 @@ const RivalRenderer = (() => {
       !!p.hand,
     );
     if (p.hand && p.faceY >= -0.4) hold();
+    if (p.flourTime > 0) {
+      for (let i = 0; i < 5; i++)
+        oval(
+          c,
+          p.x + Math.sin(i * 4) * 20,
+          p.y - 15 + Math.cos(i * 3) * 12,
+          8,
+          5,
+          "#f0eddf",
+        );
+    }
     if (p.attack) {
       const a = p.attack,
         angle =
@@ -199,6 +252,8 @@ const RivalRenderer = (() => {
       c.restore();
     }
     if (p.prep) bar(c, p.x - 25, p.y - 45, 50, 1 - p.prep.left / 1.2);
+    if (p.cleaning) bar(c, p.x - 28, p.y - 50, 56, 1 - p.cleaning.left / 2.5);
+    c.restore();
   }
   function world(c, g) {
     for (let y = 40; y < 1170; y += 40)
@@ -235,7 +290,36 @@ const RivalRenderer = (() => {
       for (const s of t.seats)
         box(c, s.x - 16, s.y - 15, 32, 30, 6, "#b58966", ink);
       for (const table of t.tables) {
-        box(c, table.x - 45, table.y - 32, 90, 64, 10, "#f0c799", ink);
+        box(
+          c,
+          table.x - table.w / 2,
+          table.y - 32,
+          table.w,
+          64,
+          10,
+          "#f0c799",
+          ink,
+        );
+        if (table.dirty) {
+          for (let i = 0; i < 7; i++)
+            oval(
+              c,
+              table.x + Math.sin(i * 8) * table.w * 0.35,
+              table.y + Math.cos(i * 3) * 20,
+              15 + (i % 3) * 4,
+              9,
+              "#b8493c",
+              ink,
+            );
+          text(
+            c,
+            "DIRTY · hold E / Enter",
+            table.x,
+            table.y + 5,
+            11,
+            "#fff2d4",
+          );
+        }
         oval(c, table.x, table.y, 22, 17, "#fff1d5", ink);
         text(c, "T" + (table.index + 1), table.x, table.y + 5, 13);
       }
@@ -244,57 +328,93 @@ const RivalRenderer = (() => {
           seat = t.seats[guest.seat],
           x = seated ? seat.x : guest.x,
           y = seated ? seat.y : guest.y;
-        person(c, x, y, Kitchen.colors[t.id]);
-        if (seated) {
-          box(c, x - 42, y - 65, 84, 27, 5, "#fff6df", ink);
+        c.save();
+        c.translate(x, y);
+        const look = guest.look || 0;
+        c.scale(
+          look === 2 || look === 5 ? 0.75 : look === 1 ? 1.12 : 1,
+          look === 2 || look === 5 ? 0.8 : look === 4 ? 1.12 : 1,
+        );
+        person(
+          c,
+          0,
+          0,
+          ["#91ac7a", "#c48469", "#91ac7a", "#8c9ab8", "#9d81aa", "#8c9ab8"][
+            look
+          ],
+        );
+        if (look === 1 || look === 4) {
+          oval(c, -4, -7, 4, 3, null, "#513d40");
+          oval(c, 4, -7, 4, 3, null, "#513d40");
+        }
+        if (look === 3) oval(c, -11, -10, 6, 10, "#b98051", ink);
+        c.restore();
+        if (guest.departing)
           text(
             c,
-            (guest.state === "waiting" ? "? " : "Order ") +
+            guest.patience <= 0 ? "Too slow!" : "Thank you!",
+            x,
+            y - 40,
+            12,
+            guest.patience <= 0 ? "#aa3e44" : "#507d53",
+          );
+        if (seated) {
+          box(c, x - 31, y - 65, 62, 27, 5, "#fff6df", ink);
+          text(
+            c,
+            (guest.state === "waiting" ? "? " : "Food ") +
               Math.ceil(guest.patience) +
               "s",
             x,
             y - 47,
-            12,
+            11,
           );
           bar(
             c,
-            x - 35,
+            x - 27,
             y - 35,
-            70,
+            54,
             guest.patience / guest.maxPatience,
-            guest.patience < 25 ? "#e57565" : "#64ad8e",
+            guest.patience < 10 ? "#e57565" : "#64ad8e",
           );
-          text(
-            c,
-            "T" + (seat.table + 1) + " / " + ((guest.seat % 2) + 1),
-            x,
-            y + 39,
-            11,
-          );
+          text(c, "T" + (seat.table + 1) + " / " + seat.place, x, y + 39, 11);
         }
       }
       if (t.waiter) {
+        if (t.waiter.service > 0)
+          bar(c, t.waiter.x - 20, t.waiter.y - 40, 40, t.waiter.service / 0.65);
         person(c, t.waiter.x, t.waiter.y, "#9272a1");
         if (t.waiter.pizza)
           food(c, t.waiter.pizza, t.waiter.x + 18, t.waiter.y + 8, 0.6);
       }
     }
-    box(c, 955, 568, 90, 64, 10, "#e3bd65", ink);
+    box(c, 930, 568, 140, 64, 10, "#e3bd65", ink);
     text(c, "VIP", 1000, 606, 18);
-    if (g.vip) {
-      person(c, 1000, 665, "#9572ae", true);
-      text(
-        c,
-        (g.vip.accepted.length ? "VIP order" : "Waiting for service") +
-          " · " +
-          Math.ceil(g.vip.patience) +
-          "s",
-        1000,
-        716,
-        14,
-      );
-      bar(c, 955, 728, 90, g.vip.patience / g.vip.maxPatience);
+    for (const seat of g.vipSeats) {
+      box(c, seat.x - 15, seat.y - 14, 30, 28, 5, "#c7a261", ink);
+      const guest = g.vips.find((v) => v.seat === seat.seat);
+      if (guest) {
+        person(c, seat.x, seat.y, "#9572ae", true);
+        text(
+          c,
+          (guest.accepted.length ? "Order " : "? ") +
+            Math.ceil(guest.patience) +
+            "s",
+          seat.x,
+          seat.y - 48,
+          12,
+        );
+        bar(
+          c,
+          seat.x - 30,
+          seat.y - 42,
+          60,
+          guest.patience / guest.maxPatience,
+        );
+      }
     }
+    for (const ball of g.projectiles)
+      GameIcons.draw(c, "flour", ball.x, ball.y, 0.7);
     for (const t of g.traps) {
       c.save();
       c.globalAlpha = t.arm > g.time ? 0.4 : 1;
@@ -333,6 +453,23 @@ const RivalRenderer = (() => {
     c.scale(zoom, zoom);
     c.translate(-camera.x, -camera.y);
     world(c, g);
+    const target = g.tutorial?.target;
+    if (target) {
+      c.strokeStyle = "#f2ac3b";
+      c.lineWidth = 5;
+      c.beginPath();
+      c.ellipse(
+        target.x,
+        target.y,
+        52 + Math.sin(g.time * 4) * 4,
+        42,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      c.stroke();
+    }
+
     const s = g.nearest(p);
     if (s && !p.panel) {
       box(c, p.x - 90, p.y - 77, 180, 25, 5, "#fff2d9");
@@ -344,7 +481,9 @@ const RivalRenderer = (() => {
             ? "Greet / serve"
             : s.type === "vip"
               ? "VIP"
-              : labels[s.type]),
+              : s.type === "table"
+                ? "Hold to clean"
+                : labels[s.type]),
         p.x,
         p.y - 60,
         12,
@@ -353,7 +492,7 @@ const RivalRenderer = (() => {
     c.restore();
     const vx = 1000 - p.x,
       vy = 665 - p.y;
-    if (g.vip) {
+    if (g.vips.length) {
       text(
         c,
         "VIP " +
@@ -366,6 +505,59 @@ const RivalRenderer = (() => {
         14,
         "#ffd775",
       );
+    }
+    if (g.vipBanner > 0) {
+      box(
+        c,
+        Math.max(8, w / 2 - 190),
+        55,
+        Math.min(380, w - 16),
+        52,
+        10,
+        "#e6bc63",
+        ink,
+      );
+      text(c, g.vips.length + " VIP GUESTS · Personal service", w / 2, 78, 16);
+      text(c, "Meet them in the central courtyard", w / 2, 97, 12);
+    }
+    if (g.tutorial?.target) {
+      const target = g.tutorial.target,
+        dx = target.x - p.x,
+        dy = target.y - p.y;
+      text(
+        c,
+        "LESSON TARGET " +
+          (Math.abs(dx) > Math.abs(dy)
+            ? dx < 0
+              ? "←"
+              : "→"
+            : dy < 0
+              ? "↑"
+              : "↓") +
+          " · " +
+          Math.round(Math.hypot(dx, dy) / 40) +
+          " m",
+        w / 2,
+        28,
+        15,
+        "#f9cd71",
+      );
+    }
+    if (p.flourTime > 0) {
+      c.save();
+      c.globalAlpha = Math.min(0.9, p.flourTime / 1.2);
+      const fall = (2.6 - p.flourTime) * h * 0.12;
+      for (let i = 0; i < 15; i++)
+        oval(
+          c,
+          w * 0.5 + Math.sin(i * 7) * w * 0.27,
+          h * 0.43 + Math.cos(i * 4) * h * 0.24 + fall,
+          w * (i % 3 === 0 ? 0.14 : 0.07),
+          h * 0.1,
+          "#f2eee2",
+        );
+      c.restore();
+      text(c, "FLOUR! Keep moving", w / 2, h - 35, 16, "#6c5c59");
     }
     return camera;
   }

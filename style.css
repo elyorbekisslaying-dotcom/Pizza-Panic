@@ -472,3 +472,142 @@ h1 {
     padding: 5px;
   }
 }
+
+.open-badge {
+  margin-left: auto;
+  border: 1px solid #9dba93;
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: #cfe5bc;
+}
+.ready-order {
+  border: 2px solid #4d9970;
+  background: #d7ead2;
+}
+.order-row small {
+  font-size: 15px;
+}
+.lock-note {
+  color: #f7ca80;
+  font-size: 14px;
+}
+.stock {
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.tutorial #players {
+  grid-template-columns: 1fr;
+  max-width: 1150px;
+  margin: auto;
+}
+.tutorial .player.red {
+  display: none;
+}
+.tutorial .view {
+  height: calc(100vh - 365px);
+  min-height: 260px;
+}
+.tutorial .hud {
+  min-height: 145px;
+}
+.tutorial .panel {
+  max-width: 680px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+}
+#instructor {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  min-height: 110px;
+  background: #342b39;
+  border-top: 3px solid #d8b680;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 7px 20px;
+}
+#instructor canvas {
+  width: 65px;
+  height: 76px;
+  flex-shrink: 0;
+}
+#instructor div {
+  flex: 1;
+}
+#instructor b {
+  color: #f5cf8a;
+}
+#instructor p {
+  margin: 5px 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+#instructor button {
+  font-size: 12px;
+}
+#countdown {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  font-size: 100px;
+  font-weight: 950;
+  color: #ffe0a3;
+  text-shadow:
+    0 5px 0 #513344,
+    0 0 30px #271e2d;
+  background: #382b37dc;
+  padding: 0 40px;
+  border-radius: 25px;
+  pointer-events: none;
+}
+.tutorial .pizza-drop {
+  height: 100px;
+  width: 130px;
+}
+.tutorial .panel-content {
+  padding: 6px;
+}
+.tutorial .panel footer {
+  padding: 5px;
+}
+.tutorial .recipe {
+  margin: 3px;
+}
+.tutorial .ingredient {
+  padding: 4px;
+}
+.tutorial .panel h3 {
+  font-size: 16px;
+}
+.tutorial .panel header {
+  padding: 6px 12px;
+}
+@media (max-width: 1100px) {
+  #instructor {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  #instructor p {
+    font-size: 12px;
+  }
+  #instructor canvas {
+    width: 45px;
+  }
+  #instructor button {
+    padding: 5px;
+  }
+  .order-row .icon {
+    width: 24px;
+  }
+  .order-row {
+    font-size: 12px;
+  }
+}
