@@ -80,7 +80,7 @@ const PizzaArt = (() => {
     return layer;
   }
 
-  function chef(ctx, x, y, facing, stride, blink) {
+  function chef(ctx, x, y, facing, stride, blink, uniform = '#dc4d52') {
     oval(ctx, x, y + 15, 20, 8, '#754b4250');
     ctx.save();
     ctx.translate(x, y);
@@ -89,10 +89,10 @@ const PizzaArt = (() => {
     for (const foot of [-1, 1]) {
       oval(ctx, foot * 8, 16 + foot * stride, 6, 5, '#514051', ink);
     }
-    box(ctx, -15, -1, 30, 21, 9, '#fff4df', ink);
+    box(ctx, -15, -1, 30, 21, 9, uniform, ink);
     oval(ctx, -16, 7 - stride, 5, 6, '#efac7b', ink);
     oval(ctx, 16, 7 + stride, 5, 6, '#efac7b', ink);
-    poly(ctx, [[-10, 8], [0, 12], [10, 8], [5, 17], [-5, 17]], '#dc4d52');
+    poly(ctx, [[-10, 8], [0, 12], [10, 8], [5, 17], [-5, 17]], uniform);
     oval(ctx, 1, -4, 13, 11, '#ffbe87', ink);
     oval(ctx, -3, -3, 1.6, 2.1, ink);
     oval(ctx, 7, -3, 1.6, 2.1, ink);
@@ -220,5 +220,5 @@ const PizzaArt = (() => {
     ctx.restore();
   }
 
-  return { kitchen, chef, item, pizza, station };
+  return { kitchen, chef, item, pizza, station, oval, box, poly };
 })();
