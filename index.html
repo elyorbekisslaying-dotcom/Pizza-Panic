@@ -1,33 +1,38 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pizza Panic — Kitchen Rivals</title>
-<link rel="stylesheet" href="style.css">
-<script defer src="js/art.js"></script>
-<script defer src="js/orders.js"></script>
-<script defer src="js/game.js"></script>
-<script defer src="js/render.js"></script>
-<script defer src="js/main.js"></script>
-</head>
-<body>
-<main>
-  <header>
-    <section id="blue" class="team blue"></section>
-    <section class="center"><strong>PIZZA PANIC</strong><small>KITCHEN RIVALS</small><div id="event" role="status"></div><div><button id="mute">Sound on [M]</button><button id="pause">Pause [Esc]</button></div></section>
-    <section id="red" class="team red"></section>
-  </header>
-  <div class="stage">
-    <canvas id="kitchen" width="1200" height="720" aria-label="Two competing pizza kitchens"></canvas>
-    <section id="overlay" class="overlay">
-      <div class="card"><p class="eyebrow">ONE KEYBOARD. TWO KITCHENS.</p><h1 id="title"></h1><div id="description"></div><div id="actions"></div></div>
-    </section>
-  </div>
-  <footer>
-    <div class="blue"><b>BLUE</b> WASD move · E interact · F punch · Q banana · Left Shift dash</div>
-    <div class="red"><b>RED</b> Arrows move · Enter interact · / punch · . banana · Right Shift dash</div>
-  </footer>
-</main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pizza Panic — Kitchen Rivals</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="js/art.js"></script>
+    <script defer src="js/orders.js"></script>
+    <script defer src="js/game.js"></script>
+    <script defer src="js/render.js"></script>
+    <script defer src="js/main.js"></script>
+  </head>
+  <body>
+    <main>
+      <div id="match" hidden>
+        <nav>
+          <b>PIZZA PANIC <small>KITCHEN RIVALS</small></b
+          ><span id="event" role="status"></span
+          ><button id="pause">Pause · Esc</button>
+        </nav>
+        <div id="players"></div>
+      </div>
+      <section id="overlay" class="overlay">
+        <div class="menu-card">
+          <div class="brand-art">
+            <canvas id="brand" width="360" height="120"></canvas>
+          </div>
+          <p class="eyebrow">ONE KEYBOARD · TWO RESTAURANTS</p>
+          <h1 id="title"></h1>
+          <div id="description"></div>
+          <div id="actions"></div>
+        </div>
+      </section>
+      <div id="drag-ghost" hidden></div>
+    </main>
+  </body>
 </html>
