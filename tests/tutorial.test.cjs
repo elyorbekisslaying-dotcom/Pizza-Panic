@@ -7,7 +7,7 @@ const tutorial = new Tutorial(g, () => completed++),
 function station(type) {
   const s = tutorial.station(type);
   p.panel = null;
-  walk(g, 0, { x: s.x, y: s.y + 70 });
+  walk(g, 0, s.approach);
   g.interact(p);
   tick(g, 0.02);
 }
@@ -78,23 +78,25 @@ while (!tutorial.done) {
       station("waiter");
       tick(g, 18);
       break;
-    case "assistant":
-      station("assistant");
-      tick(g, 9.2);
+    case "auto-order":
+      station("dough");
+      tick(g, 1.3);
       break;
-    case "assistant-pickup":
-      g.interact(p);
-      tick(g, 0.02);
-      break;
-    case "staff-bake":
+    case "auto-cook":
+      station("topping");
+      for (const k of K.recipes[p.hand.recipe].items.filter(
+        (k) => k !== "dough",
+      ))
+        g.addIngredient(p, k);
+      g.assemble(p);
       station("oven");
       tick(g, 3.1);
       g.interact(p);
-      tick(g, 0.02);
+      guest(tutorial.guest());
       break;
-    case "staff-deliver":
-      station("serving");
-      tick(g, 20);
+    case "assistant":
+      station("assistant");
+      tick(g, 45);
       break;
     case "banana":
       station("banana");
@@ -125,7 +127,7 @@ while (!tutorial.done) {
       tick(g, 2.6, [{ interact: true }, {}]);
       break;
     case "rats": {
-      walk(g, 0, { x: 650, y: 400 });
+      walk(g, 0, { x: 550, y: 270 });
       let n = 0;
       while (!g.rats.some((r) => r.stolen) && n++ < 1200) tick(g, 0.01);
       const rat = g.rats.find((r) => r.stolen);
@@ -170,8 +172,8 @@ while (!tutorial.done) {
   console.log("LESSON", key, "->", tutorial.step?.key || "complete");
 }
 assert.equal(completed, 1);
-assert.equal(g.teams[0].served, 3);
-assert.equal(g.teams[0].rep, 32);
+assert.equal(g.teams[0].served, 4);
+assert.equal(g.teams[0].rep, 42);
 // Recovery is available after lost food and at advanced lessons; it never completes them.
 const h = new Game(),
   t = new Tutorial(h, () => {});
@@ -181,7 +183,7 @@ t.recover();
 assert.equal(t.step.key, "greet");
 assert(!h.teams[0].oven);
 assert(!t.done);
-t.index = 20;
+t.index = t.steps.findIndex((s) => s.key === "clean");
 t.recover();
 assert.equal(t.step.key, "sauce");
 assert(!h.teams[0].tables.some((x) => x.dirty));

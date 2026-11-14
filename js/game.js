@@ -42,7 +42,6 @@ const RivalGame = (() => {
         signEnemyCD: 0,
         signFX: 0,
         assistant: null,
-        assistantOutput: null,
         history: [],
         alerts: [],
         rep: 0,
@@ -62,7 +61,8 @@ const RivalGame = (() => {
         spent: 0,
         starFX: 0,
         entrance: { x: Kitchen.mirror(id, 420), y: 1130 },
-        hole: { x: Kitchen.mirror(id, 780), y: 80 },
+        hole: { x: Kitchen.mirror(id, 790), y: 70 },
+        door: { x: Kitchen.mirror(id, 420), y: 1080, w: 140, open: 0 },
       }));
       this.vipSeats = [960, 1040].flatMap((x, i) =>
         [-1, 1].map((side, j) => ({
@@ -115,6 +115,8 @@ const RivalGame = (() => {
           [840, 960, 24, 432],
           [190, 460, 300, 24],
           [680, 460, 320, 24],
+          [190, 1080, 320, 24],
+          [665, 1080, 350, 24],
         ])
           this.walls.push({ x: Kitchen.mirror(id, x), y, w, h });
       this.obstacles = [
@@ -235,6 +237,48 @@ const RivalGame = (() => {
         if (!this.blocked(p.x, p.y + dy / n, p.id)) p.y += dy / n;
       }
     }
+    lineClear(a, b, r = 17) {
+      const steps = Math.max(1, Math.ceil(distance(a, b) / 4));
+      for (let i = 0; i <= steps; i++)
+        if (
+          this.solid(
+            a.x + ((b.x - a.x) * i) / steps,
+            a.y + ((b.y - a.y) * i) / steps,
+            r,
+          )
+        )
+          return false;
+      return true;
+    }
+    accessPoint(target, from = this.players[0]) {
+      if (!target) return null;
+      if (target.approach) return { ...target.approach };
+      if (!this.solid(target.x, target.y)) return { x: target.x, y: target.y };
+      const points = [];
+      for (
+        let y = target.y - (target.h || 30) / 2 - 65;
+        y <= target.y + (target.h || 30) / 2 + 65;
+        y += 20
+      )
+        for (
+          let x = target.x - (target.w || 30) / 2 - 65;
+          x <= target.x + (target.w || 30) / 2 + 65;
+          x += 20
+        ) {
+          const q = {
+            x: Math.round((x - 10) / 20) * 20 + 10,
+            y: Math.round((y - 10) / 20) * 20 + 10,
+          };
+          if (
+            !this.solid(q.x, q.y) &&
+            distance(q, target) <
+              (target.type === "table" ? target.w / 2 + 80 : 92)
+          )
+            points.push(q);
+        }
+      points.sort((a, b) => distance(a, from) - distance(b, from));
+      return points.find((q) => this.path(from, q).length) || null;
+    }
     // A shared 20px navigation grid uses the same furniture and walls as player collision.
     path(from, to) {
       const size = 20,
@@ -246,13 +290,51 @@ const RivalGame = (() => {
       ];
       let [sx, sy] = cell(from),
         [tx, ty] = cell(to);
+      const signature = this.obstacles
+        .map((o) => [o.x, o.y, o.w, o.h].join(","))
+        .join(";");
+      if (this.navSignature !== signature) {
+        this.navSignature = signature;
+        this.navGrid = new Uint8Array(W * H);
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++)
+            this.navGrid[y * W + x] = !this.solid(
+              x * size + 10,
+              y * size + 10,
+              17,
+            );
+      }
+      const rivals = this.players.includes(from)
+        ? this.players.filter((p) => p !== from && !p.hidden)
+        : [];
       const valid = (x, y) =>
         x >= 0 &&
         x < W &&
         y >= 0 &&
         y < H &&
-        !this.solid(x * size + 10, y * size + 10, 17);
+        this.navGrid[y * W + x] &&
+        !rivals.some(
+          (p) => Math.hypot(p.x - (x * size + 10), p.y - (y * size + 10)) < 36,
+        );
       if (!valid(tx, ty)) return [];
+      if (
+        !valid(sx, sy) ||
+        !this.lineClear(from, { x: sx * size + 10, y: sy * size + 10 })
+      ) {
+        const starts = [];
+        for (let dy = -2; dy <= 2; dy++)
+          for (let dx = -2; dx <= 2; dx++) {
+            const x = sx + dx,
+              y = sy + dy,
+              p = { x: x * size + 10, y: y * size + 10 };
+            if (valid(x, y) && this.lineClear(from, p))
+              starts.push({ x, y, d: distance(from, p) });
+          }
+        starts.sort((a, b) => a.d - b.d);
+        if (!starts.length) return [];
+        sx = starts[0].x;
+        sy = starts[0].y;
+      }
       const start = sy * W + sx,
         end = ty * W + tx,
         q = [start],
@@ -279,6 +361,7 @@ const RivalGame = (() => {
       const out = [];
       for (let v = end; v !== start; v = prev.get(v))
         out.push({ x: (v % W) * size + 10, y: Math.floor(v / W) * size + 10 });
+      out.push({ x: sx * size + 10, y: sy * size + 10 });
       return out.reverse();
     }
     travel(actor, dt, speed = 110) {
@@ -326,8 +409,7 @@ const RivalGame = (() => {
             (t.oven?.order === id ||
               t.pickup?.order === id ||
               t.waiter?.pizza?.order === id ||
-              t.assistant?.job?.order === id ||
-              t.assistantOutput?.order === id),
+              t.assistant?.job?.order === id),
         ) ||
         this.drops.some((d) => d.owner === owner && d.item.order === id)
       );
@@ -411,8 +493,15 @@ const RivalGame = (() => {
     status(o, id) {
       const p = this.players[id],
         t = this.teams[id];
-      if (t.assistant?.job?.order === o.id) return "Assistant preparing";
-      if (t.assistantOutput?.order === o.id) return "Raw ready · assistant";
+      if (t.assistant?.job?.order === o.id)
+        return (
+          (t.assistant.food?.stage === "ready" ||
+          (t.oven?.order === o.id && t.oven.stage === "ready")
+            ? "Ready · "
+            : "") +
+          "Cook · " +
+          t.assistant.state
+        );
       if (p.prep?.order === o.id) return "Player preparing";
       if (t.waiter?.pizza?.order === o.id) return "Being delivered";
       if (t.pickup?.order === o.id) return "Ready at pickup";
@@ -495,11 +584,10 @@ const RivalGame = (() => {
         if (p.panel === "assembly" && !p.hand) p.panel = null;
       }
       for (const t of this.teams) {
-        for (const key of ["oven", "pickup", "assistantOutput"])
+        for (const key of ["oven", "pickup"])
           if (t[key]?.order === id) t[key] = null;
         if (t.assistant?.job?.order === id) {
-          t.assistant.job = null;
-          t.assistant.state = "Waiting for orders";
+          this.releaseCook(t);
         }
         if (t.waiter?.pizza?.order === id) t.waiter.pizza = null;
         if (t.waiter?.target === id) {
@@ -559,14 +647,15 @@ const RivalGame = (() => {
         return;
       }
       if (s.type === "assistant" && t.assistant) {
-        if (t.assistantOutput && !p.hand) {
-          p.hand = t.assistantOutput;
-          t.assistantOutput = null;
-          this.record("assistantPickup", { id: p.id });
-        } else this.say(p, t.assistant.state);
+        this.say(
+          p,
+          "Cook: " +
+            t.assistant.state +
+            ". Collect baked food at Pickup or Oven.",
+        );
         return;
       }
-      const o = this.order(p.selected);
+      let o = this.order(p.selected);
       if (s.type === "seat" || s.type === "vip") {
         const c =
           s.type === "vip"
@@ -633,7 +722,16 @@ const RivalGame = (() => {
         if (["banana", "flour", "bottle"].includes(key))
           p.hand = { kind: key, owner: p.id };
         if (key === "assistant") {
-          t.assistant = { job: null, state: "Waiting for orders" };
+          t.assistant = {
+            ...s.approach,
+            job: null,
+            food: null,
+            path: [],
+            state: "Waiting for orders",
+            faceX: p.id ? -1 : 1,
+            faceY: 0,
+            walk: 0,
+          };
           this.record("hire", { id: p.id, kind: key });
         }
         if (
@@ -645,8 +743,7 @@ const RivalGame = (() => {
           this.record("hire", { id: p.id, kind: key });
           const a = t.stations.find((s) => s.type === "serving");
           t.waiter = {
-            x: a.x,
-            y: a.y + 70,
+            ...a.approach,
             task: "idle",
             pizza: null,
             path: [],
@@ -659,13 +756,45 @@ const RivalGame = (() => {
         return;
       }
       if (s.type === "dough") {
-        if (
-          p.hand ||
-          !this.accepted(o, p.id) ||
-          this.pizzaExists(o.id, p.id) ||
-          t.stock.dough <= 0
-        ) {
-          this.say(p, "Select an accepted order, free hands and check dough");
+        if (p.hand || p.prep) {
+          this.say(p, "Free your hands before preparing dough");
+          return;
+        }
+        if (!this.accepted(o, p.id)) {
+          p.selected = null;
+          o = t.customers
+            .filter(
+              (c) => this.accepted(c, p.id) && !this.pizzaExists(c.id, p.id),
+            )
+            .sort((a, b) => a.patience - b.patience)[0];
+          if (!o) {
+            this.say(
+              p,
+              "No unclaimed accepted regular order. Greet a guest or select a VIP personally.",
+            );
+            return;
+          }
+          p.selected = o.id;
+          this.record("autoSelect", { id: p.id, order: o.id });
+          this.say(
+            p,
+            "Assigned T" +
+              (t.seats[o.seat].table + 1) +
+              " / " +
+              t.seats[o.seat].place +
+              ": " +
+              Kitchen.recipes[o.recipe].name,
+          );
+        }
+        if (this.pizzaExists(o.id, p.id)) {
+          this.say(
+            p,
+            this.status(o, p.id) + " — this order already has a cook or dish",
+          );
+          return;
+        }
+        if (t.stock.dough <= 0) {
+          this.say(p, "No dough in stock. Visit Supplies.");
           return;
         }
         t.stock.dough--;
@@ -694,6 +823,8 @@ const RivalGame = (() => {
           } else if (t.oven.stage === "ready" && !p.hand) {
             p.hand = t.oven;
             t.oven = null;
+            if (t.assistant?.job?.order === p.hand.order) this.releaseCook(t);
+            this.record("ovenCollect", { id: p.id, order: p.hand.order });
           } else this.say(p, "Oven busy or hands full");
         } else if (p.hand?.stage === "raw") {
           t.oven = { ...p.hand, stage: "baking", timer: 3 };
@@ -701,19 +832,28 @@ const RivalGame = (() => {
         } else this.say(p, "Oven needs an assembled raw pizza");
       }
       if (s.type === "serving") {
+        if (!p.hand && t.pickup) {
+          p.hand = t.pickup;
+          t.pickup = null;
+          this.record("pickupCollect", { id: p.id, order: p.hand.order });
+          return;
+        }
         if (
-          !t.waiter ||
           t.pickup ||
           p.hand?.stage !== "ready" ||
           this.order(p.hand.order)?.team !== p.id
         ) {
-          this.say(p, "Pickup accepts one baked regular pizza; hire a waiter");
+          this.say(
+            p,
+            "Pickup holds one baked regular pizza. Empty hands collect it.",
+          );
           return;
         }
         t.pickup = p.hand;
         p.hand = null;
       }
     }
+
     drop(p) {
       if (p.hand) {
         this.drops.push({
@@ -740,6 +880,10 @@ const RivalGame = (() => {
           life: 45,
         });
         v.prep = null;
+      }
+      if (v.cleaning) {
+        this.teams[v.id].tables[v.cleaning.table].cleanProgress = 0;
+        v.cleaning = null;
       }
       v.panel = null;
       v.attack = null;
@@ -804,7 +948,7 @@ const RivalGame = (() => {
           delay: i * 0.7,
           path: [],
         };
-        r.path = this.path(r, { x: storage.x, y: storage.y + 65 });
+        r.path = this.path(r, storage.approach);
         this.rats.push(r);
       }
       this.announce((id ? "RED" : "BLUE") + ": rats heading for storage!");
@@ -825,7 +969,7 @@ const RivalGame = (() => {
             w.lastTask === "accept")
         ) {
           w.task = "pickup";
-          w.path = this.path(w, { x: pickup.x, y: pickup.y + 70 });
+          w.path = this.path(w, pickup.approach);
         } else if (c) {
           w.target = c.id;
           w.task = "accept";
@@ -843,9 +987,9 @@ const RivalGame = (() => {
         return;
       }
       this.metrics.waiterBusy[t.id] += dt;
-      if (!this.travel(w, dt, 130)) return;
+      if (!this.travel(w, dt, 115)) return;
       w.service = (w.service || 0) + dt;
-      if (w.service < 0.65) return;
+      if (w.service < 0.9) return;
       w.service = 0;
       if (w.task === "pickup") {
         if (
@@ -906,57 +1050,175 @@ const RivalGame = (() => {
       this.nextVIP = this.time + 60;
       return true;
     }
+    releaseCook(t) {
+      const a = t.assistant;
+      if (!a) return;
+      a.job = null;
+      a.food = null;
+      a.phase = "return";
+      a.path = [];
+      a.destination = null;
+      a.state = "Returning to bench";
+    }
+    cookWalk(a, target, state, dt) {
+      const key = target.x + "," + target.y;
+      if (a.destination !== key) {
+        a.path = this.path(a, target);
+        a.destination = key;
+      }
+      a.state = state;
+      if (a.path.length) {
+        const next = a.path[0],
+          d = distance(a, next) || 1;
+        a.faceX = (next.x - a.x) / d;
+        a.faceY = (next.y - a.y) / d;
+        a.walk += dt * 12;
+        this.travel(a, dt, 110);
+      }
+      return distance(a, target) < 22;
+    }
     assistantStep(t, dt) {
       const a = t.assistant;
       if (!a) return;
-      if (a.job) {
-        if (!this.order(a.job.order)) {
-          a.job = null;
+      const bench = t.stations.find((s) => s.type === "assistant").approach;
+      const oven = t.stations.find((s) => s.type === "oven").approach;
+      const pickup = t.stations.find((s) => s.type === "serving").approach;
+      if (a.job && !this.order(a.job.order)) this.releaseCook(t);
+      if (!a.job) {
+        if (!this.cookWalk(a, bench, "Returning to bench", dt)) return;
+        const orders = t.customers
+          .filter(
+            (c) => this.accepted(c, t.id) && !this.pizzaExists(c.id, t.id),
+          )
+          .sort((a, b) => a.patience - b.patience);
+        if (!orders.length) {
           a.state = "Waiting for orders";
           return;
         }
-        this.metrics.assistantBusy[t.id] += dt;
+        const o = orders.find((c) =>
+          Kitchen.recipes[c.recipe].items.every((k) => t.stock[k] > 0),
+        );
+        if (!o) {
+          a.state = "Missing ingredients";
+          return;
+        }
+        // Reserve and spend together. The reservation is metadata, never a second pizza.
+        a.job = { order: o.id, recipe: o.recipe, left: 9 };
+        a.food = {
+          kind: "pizza",
+          order: o.id,
+          owner: t.id,
+          recipe: o.recipe,
+          stage: "preparing",
+          added: Kitchen.recipes[o.recipe].items.filter((k) => k !== "dough"),
+        };
+        Kitchen.recipes[o.recipe].items.forEach((k) => t.stock[k]--);
+        a.phase = "prep";
+      }
+      this.metrics.assistantBusy[t.id] += dt;
+      if (a.phase === "prep") {
         a.job.left -= dt;
         a.state = a.job.left > 5 ? "Preparing dough" : "Assembling";
         if (a.job.left <= 0) {
-          t.assistantOutput = { ...a.job, stage: "raw" };
-          a.job = null;
-          a.state = "Waiting for pickup";
-          this.record("assistantReady", { id: t.id });
+          a.food.stage = "raw";
+          a.phase = "oven";
+          a.destination = null;
         }
         return;
       }
-      if (t.assistantOutput) {
-        a.state = "Waiting for pickup";
+      if (a.phase === "oven") {
+        if (t.oven) {
+          this.cookWalk(
+            a,
+            { x: oven.x, y: oven.y + 80 },
+            "Waiting for oven",
+            dt,
+          );
+          return;
+        }
+        if (!this.cookWalk(a, oven, "Walking to oven", dt)) return;
+        t.oven = a.food;
+        a.food = null;
+        t.oven.stage = "baking";
+        t.oven.timer = 3;
+        a.phase = "bake";
+        a.collectionLeft = 0.6;
+        a.state = "Baking";
+        this.record("cookLoaded", { id: t.id, order: a.job.order });
         return;
       }
-      const orders = t.customers
-        .filter((c) => this.accepted(c, t.id) && !this.pizzaExists(c.id, t.id))
-        .sort((a, b) => a.patience - b.patience);
-      if (!orders.length) {
-        a.state = "Waiting for orders";
+      if (a.phase === "bake") {
+        if (t.oven?.order !== a.job.order) {
+          this.releaseCook(t);
+          return;
+        }
+        if (t.oven.stage === "burned") {
+          t.oven = null;
+          this.alert(
+            t,
+            "Cook discarded burned food; order can be prepared again",
+          );
+          this.releaseCook(t);
+          return;
+        }
+        a.state = "Baking";
+        if (t.oven.stage !== "ready") return;
+        a.state = "Collecting baked pizza";
+        a.collectionLeft -= dt;
+        if (a.collectionLeft > 0) return;
+        if (!this.cookWalk(a, oven, "Collecting baked pizza", dt)) return;
+        a.food = t.oven;
+        t.oven = null;
+        a.phase = "pickup";
+        a.destination = null;
         return;
       }
-      const o = orders.find((c) =>
-        Kitchen.recipes[c.recipe].items.every((k) => t.stock[k] > 0),
-      );
-      if (!o) {
-        a.state = "Missing ingredients";
-        return;
+      if (a.phase === "pickup") {
+        if (t.pickup) {
+          this.cookWalk(
+            a,
+            { x: pickup.x + (t.id ? -80 : 80), y: pickup.y },
+            "Waiting for pickup space",
+            dt,
+          );
+          return;
+        }
+        if (!this.cookWalk(a, pickup, "Carrying baked pizza to pickup", dt))
+          return;
+        if (a.food?.stage !== "ready") {
+          this.releaseCook(t);
+          return;
+        }
+        t.pickup = a.food;
+        this.record("cookPickup", { id: t.id, order: a.job.order });
+        this.releaseCook(t);
       }
-      // Reservation and ingredient consumption are one synchronous operation.
-      const items = Kitchen.recipes[o.recipe].items;
-      a.job = {
-        kind: "pizza",
-        order: o.id,
-        owner: t.id,
-        recipe: o.recipe,
-        stage: "preparing",
-        added: items.filter((k) => k !== "dough"),
-        left: 9,
-      };
-      items.forEach((k) => t.stock[k]--);
-      a.state = "Preparing dough";
+    }
+    makeStains(table) {
+      const stains = [];
+      for (let group = 0; group < 4; group++) {
+        const cx = (this.random() - 0.5) * table.w * 0.65,
+          cy = (this.random() - 0.5) * table.h * 0.55;
+        for (let j = 0; j < 6; j++)
+          stains.push({
+            x: cx + (this.random() - 0.5) * table.w * 0.22,
+            y: cy + (this.random() - 0.5) * 22,
+            rx: 3 + this.random() * Math.min(22, table.w * 0.13),
+            ry: 2 + this.random() * 12,
+            angle: this.random() * Math.PI,
+            tone: this.random(),
+          });
+      }
+      for (let j = 0; j < 12; j++)
+        stains.push({
+          x: (this.random() - 0.5) * (table.w - 8),
+          y: (this.random() - 0.5) * (table.h - 8),
+          rx: 1 + this.random() * 3,
+          ry: 1 + this.random() * 2,
+          angle: this.random() * Math.PI,
+          tone: this.random(),
+        });
+      return stains;
     }
     useItem(p) {
       if (!this.active() || p.stun || p.panel || p.prep || p.trapCD) return;
@@ -999,6 +1261,8 @@ const RivalGame = (() => {
           return;
         }
         table.dirty = true;
+        table.cleanProgress = 0;
+        table.stains = this.makeStains(table);
         table.splashUntil = this.time + 0.7;
         p.hand = null;
         p.trapCD = 0.6;
@@ -1061,8 +1325,7 @@ const RivalGame = (() => {
         t.oven,
         t.pickup,
         t.waiter?.pizza,
-        t.assistant?.job,
-        t.assistantOutput,
+        t.assistant?.food,
         ...this.drops.filter((d) => d.owner === t.id).map((d) => d.item),
       ];
       for (const dish of dishes) {
@@ -1109,6 +1372,15 @@ const RivalGame = (() => {
       this.vipBanner = Math.max(0, this.vipBanner - dt);
       this.noticeTime = Math.max(0, this.noticeTime - dt);
       for (const t of this.teams) {
+        const nearDoor = [
+          ...this.players.filter((p) => !p.hidden),
+          ...t.customers,
+          t.waiter,
+          t.assistant,
+        ]
+          .filter(Boolean)
+          .some((a) => distance(a, t.door) < 130);
+        t.door.open += ((nearDoor ? 1 : 0) - t.door.open) * Math.min(1, dt * 9);
         t.signEnemyCD = Math.max(0, t.signEnemyCD - dt);
         t.signFX = Math.max(0, t.signFX - dt);
         t.history = t.history.filter((h) => h.until > this.time);
@@ -1237,11 +1509,15 @@ const RivalGame = (() => {
             !table.dirty ||
             distance(p, table) > table.w / 2 + 90
           ) {
+            table.cleanProgress = 0;
             p.cleaning = null;
           } else {
             p.cleaning.left -= dt;
+            table.cleanProgress = 1 - p.cleaning.left / 2.5;
             if (p.cleaning.left <= 0) {
               table.dirty = false;
+              table.stains = null;
+              table.cleanProgress = 0;
               table.protectedUntil = this.time + 10;
               p.cleaning = null;
               this.record("clean", { id: p.id, table: table.index });
@@ -1307,7 +1583,7 @@ const RivalGame = (() => {
         if (this.travel(r, dt, r.phase === "out" ? 160 : 90)) {
           if (r.phase === "in") {
             const storage = t.stations.find((s) => s.type === "storage");
-            if (distance(r, { x: storage.x, y: storage.y + 65 }) < 25) {
+            if (distance(r, storage.approach) < 25) {
               const key = Kitchen.stockKeys.find((k) => t.stock[k] > 0);
               if (key) {
                 t.stock[key]--;

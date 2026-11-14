@@ -30,8 +30,8 @@ function tick(g, s, input) {
 function at(g, id, type) {
   const p = g.players[id],
     s = g.teams[id].stations.find((s) => s.type === type);
-  p.x = s.x;
-  p.y = s.y + 70;
+  p.x = s.approach.x;
+  p.y = s.approach.y;
   p.panel = null;
   return p;
 }
@@ -127,7 +127,7 @@ test("all stations and all seats have collision-safe routes in both kitchens", (
   const g = setup();
   for (const t of g.teams)
     for (const s of [...t.stations, ...t.seats]) {
-      const target = s.approach || { x: s.x, y: s.y + 70 };
+      const target = s.approach || s.approach;
       const path = g.path(g.players[t.id], target);
       assert(path.length, s.type);
       for (const p of path) assert(!g.solid(p.x, p.y, 12), s.type);
@@ -189,7 +189,7 @@ test("waiter takes orders by walking and accepts only explicitly transferred bak
   g.interact(p);
   assert(t.waiter);
   const initial = { x: t.waiter.x, y: t.waiter.y };
-  tick(g, 14);
+  tick(g, 20);
   const o = t.customers[0];
   assert.equal(o.state, "accepted");
   assert(Math.hypot(t.waiter.x - initial.x, t.waiter.y - initial.y) > 100);
@@ -331,8 +331,8 @@ test("bananas occupy hands, purchase respects food, warning and owner immunity",
   assert(r.stun > 0);
   assert.equal(g.traps.length, 0);
   p.immune = 0;
-  p.x = 140;
-  p.y = 210;
+  p.x = 190;
+  p.y = 170;
   p.faceX = 0;
   p.faceY = -1;
   p.hand = { kind: "banana", owner: 0 };
@@ -561,7 +561,7 @@ test("full blue route uses actual collision movement from guest through cooking 
   }
   const visit = (type) => {
     const s = t.stations.find((s) => s.type === type);
-    walk({ x: s.x, y: s.y + 70 });
+    walk(s.approach);
     g.interact(p);
   };
   tick(g, 8);

@@ -39,31 +39,46 @@ const Kitchen = (() => {
     },
   ];
   const mirror = (id, x) => (id ? 2000 - x : x);
-  const stations = (id) =>
-    [
-      ["dough", 140, 140],
-      ["topping", 340, 140],
-      ["oven", 540, 140],
-      ["terminal", 140, 330],
-      ["serving", 340, 330],
-      ["bin", 540, 330],
-      ["storage", 740, 300],
-      ["assistant", 740, 140],
-      ["flour", 140, 600],
-      ["bottle", 340, 600],
-      ["sign", 650, 1060],
-      ["supply", 140, 1040],
-      ["banana", 340, 1040],
-      ["rats", 540, 1040],
-      ["waiter", 740, 1040],
-    ].map(([type, x, y]) => ({
+  const stations = (id) => {
+    const edge = [
+      ["dough", 190, 100, 190, 170],
+      ["topping", 370, 100, 370, 170],
+      ["oven", 550, 100, 550, 170],
+      ["assistant", 730, 100, 730, 170],
+      ["terminal", 70, 190, 150, 190],
+      ["serving", 70, 330, 150, 330],
+      ["waiter", 70, 410, 150, 410],
+      ["storage", 740, 270, 670, 270],
+      ["bin", 740, 410, 670, 410],
+      ["supply", 70, 550, 150, 550],
+      ["sign", 530, 1080, 530, 1010],
+    ].map(([type, x, y, ax, ay]) => ({
       type,
       team: id,
       x: mirror(id, x),
       y,
       w: 76,
       h: 60,
+      approach: { x: mirror(id, ax), y: ay },
     }));
+    // A half-turn maps the upper Blue stalls onto the lower Red stalls.
+    const gadgets = [
+      ["banana", 900, 220],
+      ["flour", 1100, 220],
+      ["bottle", 900, 370],
+      ["rats", 1100, 370],
+    ].map(([type, x, y]) => ({
+      type,
+      team: id,
+      x: id ? 2000 - x : x,
+      y: id ? 1200 - y : y,
+      w: 76,
+      h: 60,
+      approach: { x: id ? 2000 - x : x, y: id ? 1200 - y - 70 : y + 70 },
+      zone: "gadgets",
+    }));
+    return [...edge, ...gadgets];
+  };
   const tables = (id) =>
     [2, 4, 6].map((capacity, index) => ({
       type: "table",

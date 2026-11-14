@@ -23,6 +23,8 @@ class KitchenTutorial {
     g.teams[1].customers = [];
     g.teams[1].open = false;
     g.players[1].hidden = true;
+    this.guide = { path: [], goal: null };
+    this.routeBuilds = 0;
     this.startStep();
   }
   events(type) {
@@ -45,11 +47,40 @@ class KitchenTutorial {
   get step() {
     return this.steps[this.index];
   }
+  missingIngredient() {
+    const g = this.game,
+      p = g.players[0],
+      o = g.order(p.selected),
+      food = p.hand || p.prep;
+    if (
+      !o ||
+      !g.accepted(o, 0) ||
+      g.teams[0].oven ||
+      ["raw", "ready"].includes(food?.stage)
+    )
+      return null;
+    return Kitchen.recipes[o.recipe].items.find(
+      (k) =>
+        g.teams[0].stock[k] <= 0 &&
+        !(food && (k === "dough" || food.added.includes(k))),
+    );
+  }
   get target() {
+    const drop = this.game.drops.find(
+      (d) => d.owner === 0 && d.item.kind !== "ingredient",
+    );
+    if (drop && !this.game.players[0].hand) return drop;
+    if (
+      ["ingredients", "auto-cook", "vip"].includes(this.step?.key) &&
+      this.missingIngredient()
+    )
+      return this.station("supply");
     const target = this.step?.target;
     return typeof target === "function" ? target() : this.station(target);
   }
   startStep() {
+    this.guide = { path: [], goal: null };
+    this.accessCache = null;
     this.mark = this.game.eventSerial;
     this.started = this.game.time;
     this.step?.enter?.();
@@ -68,7 +99,7 @@ class KitchenTutorial {
       },
       {
         key: "sign",
-        text: "Visit the entrance sign. Press E to close, then E again to reopen. Existing guests stay; new arrivals stop when Closed.",
+        text: "Follow the route to the real entrance door and its sign. Press E to close, then E again to reopen. Existing guests stay; new arrivals stop when Closed.",
         target: "sign",
         test: () => this.events("sign").length >= 2 && t().open,
       },
@@ -100,25 +131,29 @@ class KitchenTutorial {
         key: "dough",
         text: "Close the shop with I. Visit Dough and press E with free hands. One dough is consumed; preparation takes 1.2 seconds.",
         target: "dough",
-        test: () => hand("dough"),
+        test: () => hand("dough") || hand("raw") || !!t().oven,
       },
       {
         key: "ingredients",
         text: "At Toppings, add sauce and cheese. Click or drag onto dough, or select with WASD and press E. Added ingredients are spent once.",
         target: "topping",
-        test: () => hand("dough") && p().hand.added.length === 2,
+        test: () =>
+          (hand("dough") && p().hand.added.length === 2) ||
+          hand("raw") ||
+          !!t().oven,
       },
       {
         key: "raw",
         text: "Select Confirm assembly and activate it. This creates RAW pizza; it cannot earn money yet. I closes without losing additions.",
         target: "topping",
-        test: () => hand("raw"),
+        test: () => hand("raw") || !!t().oven,
       },
       {
         key: "oven",
         text: "Take the raw pizza to Oven and press E. Only the oven can turn it into baked food.",
         target: "oven",
-        test: () => t().oven?.stage === "baking",
+        test: () =>
+          ["baking", "ready"].includes(t().oven?.stage) || hand("ready"),
       },
       {
         key: "collect",
@@ -134,7 +169,7 @@ class KitchenTutorial {
       },
       {
         key: "waiter",
-        text: "Hire a waiter for 100 at the purple staff counter. Watch them walk to our next guest and take the order. They move slower than you.",
+        text: "Hire a waiter for 100 beside the kitchen wall. Watch them walk to our next guest and take the order. They move slower than you.",
         target: "waiter",
         enter: () => {
           g.addCustomer(t());
@@ -144,32 +179,56 @@ class KitchenTutorial {
           t().customers.some((c) => !c.departing && c.state === "accepted"),
       },
       {
-        key: "assistant",
-        text: "Hire the assistant for 180. They reserve one accepted regular order, spend real ingredients and take nine seconds to assemble raw food.",
-        target: "assistant",
-        test: () => !!t().assistantOutput,
+        key: "auto-order",
+        text: "The waiter accepted an order. Close Orders if open; at Dough, press E with empty hands. It assigns the most urgent unclaimed regular order automatically. Manual Select still has priority.",
+        target: "dough",
+        enter: () => {
+          p().selected = null;
+        },
+        test: () => !!p().prep || hand("dough"),
       },
       {
-        key: "assistant-pickup",
-        text: "Collect the RAW pizza at Assistant with E. The assistant cannot bake, serve, shop or handle VIPs. You remain the chef.",
-        target: "assistant",
-        test: () => this.events("assistantPickup").length > 0,
-      },
-      {
-        key: "staff-bake",
-        text: "Load this raw pizza into Oven, wait, then collect it. Staff never turn raw food into a paid order.",
-        target: "oven",
-        test: () => hand("ready"),
-      },
-      {
-        key: "staff-deliver",
-        text: "Press E at Waiter pickup to hand over the baked pizza. Watch the waiter carry it to the exact guest and finish delivery.",
-        target: "serving",
+        key: "auto-cook",
+        text: "Finish this order: Toppings → confirm → Oven → collect → exact guest (or Pickup). No mandatory trip to Orders. Use the turquoise route; follow the highlighted button when a window is open.",
+        target: () => {
+          if (p().prep) return this.station("dough");
+          if (t().oven) return this.station("oven");
+          if (hand("dough")) return this.station("topping");
+          if (hand("raw")) return this.station("oven");
+          if (hand("ready")) return this.guestTarget();
+          return this.station("dough");
+        },
         test: () => this.events("deliver").length > 0,
       },
       {
+        key: "assistant",
+        text: "Hire a cook for 180 at the kitchen bench. Watch them prepare, walk to the shared oven, bake, and carry the finished pizza to Pickup. The waiter then delivers it. You may also collect baked food yourself.",
+        target: "assistant",
+        enter: () => {
+          g.addCustomer(t());
+          this.staffOrder = null;
+          this.staffLoaded = false;
+          this.staffPlaced = false;
+        },
+        test: () => {
+          const loaded = this.events("cookLoaded")[0];
+          if (loaded) {
+            this.staffOrder = loaded.order;
+            this.staffLoaded = true;
+          }
+          if (
+            this.events("cookPickup").some((e) => e.order === this.staffOrder)
+          )
+            this.staffPlaced = true;
+          return (
+            this.staffLoaded &&
+            this.events("deliver").some((e) => e.order === this.staffOrder)
+          );
+        },
+      },
+      {
         key: "banana",
-        text: "Buy a banana, carry it to clear floor near the training chef and press Q. Our dummy walks onto it after the warning. Food drops on a hit; immunity prevents stun chains.",
+        text: "Visit the Blue gadget zone ABOVE the central VIP table. Buy a banana, carry it to clear floor near the training chef and press Q. Our dummy walks onto it after the warning. Food drops on a hit; immunity prevents stun chains.",
         target: () =>
           p().hand?.kind === "banana"
             ? { x: 570, y: 600 }
@@ -224,13 +283,13 @@ class KitchenTutorial {
         text: "A rat wave is heading for Storage. Wait clear of the burrow; let a rat steal, approach it to scare it, then press E by the dropped ingredient to recover it.",
         target: () =>
           g.drops.find((d) => d.item.kind === "ingredient") ||
-          g.rats.find((r) => r.stolen) || { x: 650, y: 400 },
+          g.rats.find((r) => r.stolen) || { x: 550, y: 270 },
         enter: () => {},
         test: () => this.events("recover").length > 0,
       },
       {
         key: "vip",
-        text: "Personally greet the golden VIP, then cook and deliver their pizza. Staff cannot help with VIPs. Each guest awards 40 coins and 12 reputation once.",
+        text: "Personally greet the golden VIP, then cook and deliver their pizza. Staff cannot help with VIPs. Follow the route to Supplies if rats left an ingredient empty. Each guest awards 40 coins and 12 reputation once.",
         target: () => {
           const o = g.vip;
           if (!o) return g.vipSeats[0].approach;
@@ -250,30 +309,105 @@ class KitchenTutorial {
   }
   // Recovery resets a whole meaningful lesson, not a pretend successful step.
   recover() {
-    const index = this.index;
-    if (index <= 11) {
-      this.restart();
-      this.index = 2;
-      this.game.teams[0].stock.cheese = 4;
-      this.startStep();
-      return;
-    }
-    if (index <= 16) {
-      this.restart();
-      this.index = 12;
-      this.game.teams[0].stock.cheese = 8;
-      this.startStep();
-      return;
-    }
+    const key = this.step.key;
+    const first = this.steps.findIndex((s) => s.key === "waiter"),
+      last = this.steps.findIndex((s) => s.key === "assistant");
+    const old = this.index;
     this.restart();
     this.game.teams[0].stock.cheese = 8;
-    this.game.teams[0].customers = [];
-    this.index = index;
-    this.startStep();
-    if (index === 20) {
-      this.index = 19;
-      this.startStep();
+    if (old < first) this.index = 2;
+    else if (old <= last) this.index = first;
+    else {
+      this.game.teams[0].customers = [];
+      this.index = this.steps.findIndex(
+        (s) => s.key === (key === "clean" ? "sauce" : key),
+      );
     }
+    this.startStep();
+  }
+  get uiTarget() {
+    if (this.done) return null;
+    const p = this.game.players[0],
+      key = this.step.key;
+    if (key === "inventory")
+      return p.panel === "terminal"
+        ? '[data-action="inspect"]'
+        : '[data-stock="cheese"]';
+    if (!p.panel) return null;
+    if (
+      p.panel === "supply" &&
+      ["ingredients", "auto-cook", "vip"].includes(key)
+    ) {
+      const missing = this.missingIngredient();
+      return missing
+        ? '[data-action="buy"][data-key="' + missing + '"]'
+        : '[data-action="close"]';
+    }
+    if (key === "terminal" && p.panel === "terminal")
+      return '[data-action="select"]';
+    if (key === "buy" && p.panel === "supply")
+      return '[data-action="buy"][data-key="cheese"]';
+    if (
+      ["ingredients", "raw", "auto-cook", "vip"].includes(key) &&
+      p.panel === "assembly" &&
+      p.hand
+    ) {
+      const missing = Kitchen.recipes[p.hand.recipe].items.find(
+        (k) => k !== "dough" && !p.hand.added.includes(k),
+      );
+      return missing
+        ? '[data-action="add"][data-key="' + missing + '"]'
+        : '[data-action="confirm"]';
+    }
+    return '[data-action="close"]';
+  }
+  updateGuide() {
+    if (this.done || this.uiTarget) {
+      this.guide = { path: [], goal: null };
+      return;
+    }
+    const g = this.game,
+      p = g.players[0],
+      raw = this.target;
+    const accessKey = raw
+      ? [raw.x, raw.y, raw.approach?.x, raw.approach?.y].join(",")
+      : "none";
+    if (this.accessCache?.key !== accessKey)
+      this.accessCache = {
+        key: accessKey,
+        goal:
+          raw === g.players[1]
+            ? { x: raw.x - 80, y: raw.y }
+            : g.accessPoint(raw, p),
+      };
+    let goal = this.accessCache.goal;
+    if (!goal) {
+      this.guide = { path: [], goal: null };
+      return;
+    }
+    const key =
+      this.step.key +
+      ":" +
+      Math.round(goal.x / 20) +
+      "," +
+      Math.round(goal.y / 20);
+    const prev = this.guide;
+    if (
+      prev.key === key &&
+      prev.from &&
+      Math.hypot(p.x - prev.from.x, p.y - prev.from.y) < 45 &&
+      g.time - prev.time < 1
+    )
+      return;
+    if (prev.key === key && g.time - prev.time < 0.25) return;
+    this.guide = {
+      path: g.path(p, goal),
+      goal,
+      key,
+      from: { x: p.x, y: p.y },
+      time: g.time,
+    };
+    this.routeBuilds++;
   }
   input() {
     if (this.step?.key !== "banana") return {};
@@ -292,9 +426,31 @@ class KitchenTutorial {
       this.step.key === "rats" &&
       !this.game.rats.length &&
       !this.game.drops.some((d) => d.item.kind === "ingredient") &&
-      Math.hypot(p.x - 650, p.y - 400) < 25
+      Math.hypot(p.x - 550, p.y - 270) < 25
     )
       this.game.invade(0);
+    const cooking = [
+      "ingredients",
+      "raw",
+      "oven",
+      "collect",
+      "serve",
+      "auto-cook",
+    ];
+    const order = this.guest();
+    if (
+      cooking.includes(this.step.key) &&
+      order &&
+      this.game.accepted(order, 0) &&
+      !this.game.pizzaExists(order.id, 0)
+    ) {
+      this.index = this.steps.findIndex(
+        (s) =>
+          s.key === (this.step.key === "auto-cook" ? "auto-order" : "dough"),
+      );
+      this.startStep();
+    }
+    this.updateGuide();
     if (this.step.test()) {
       this.index++;
       if (this.index >= this.steps.length) {
@@ -303,6 +459,7 @@ class KitchenTutorial {
         return;
       }
       this.startStep();
+      this.updateGuide();
     }
   }
 }

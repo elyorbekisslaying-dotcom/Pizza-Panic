@@ -64,7 +64,7 @@ fs.mkdirSync(out, { recursive: true });
         rivalTest.game.teams[id].stations.find((s) => s.type === type),
       { type, id },
     );
-    await pos(s.x, s.y + 70, id);
+    await pos(s.approach.x, s.approach.y, id);
     await page.keyboard.press(id ? "Enter" : "KeyE");
     await tick(0.02);
   }
@@ -224,20 +224,18 @@ fs.mkdirSync(out, { recursive: true });
           await station("waiter");
           await tick(18);
           break;
+        case "auto-order":
+          await station("dough");
+          await tick(1.3);
+          break;
+        case "auto-cook":
+          await assemble();
+          await bake();
+          await guest();
+          break;
         case "assistant":
           await station("assistant");
-          await tick(9.2);
-          break;
-        case "assistant-pickup":
-          await page.keyboard.press("KeyE");
-          await tick(0.02);
-          break;
-        case "staff-bake":
-          await bake();
-          break;
-        case "staff-deliver":
-          await station("serving");
-          await tick(20);
+          await tick(45);
           break;
         case "banana":
           await station("banana");
@@ -275,7 +273,7 @@ fs.mkdirSync(out, { recursive: true });
           await page.keyboard.up("KeyE");
           break;
         case "rats": {
-          await pos(650, 400);
+          await pos(550, 270);
           let count = 0;
           while (
             !(await page.evaluate(() =>
@@ -301,6 +299,23 @@ fs.mkdirSync(out, { recursive: true });
         }
         case "vip":
           await guest(0, true);
+          {
+            const missing = await page.evaluate(() => {
+              const g = rivalTest.game;
+              return Kitchen.recipes[g.vip.recipe].items.filter(
+                (k) => g.teams[0].stock[k] === 0,
+              );
+            });
+            if (missing.length) {
+              await station("supply");
+              for (const k of missing)
+                await page
+                  .locator(
+                    '.player.blue [data-action="buy"][data-key="' + k + '"]',
+                  )
+                  .click();
+            }
+          }
           await station("dough");
           await tick(1.3);
           await assemble();

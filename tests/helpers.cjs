@@ -19,8 +19,8 @@ function tick(g, s, input) {
 function at(g, id, type) {
   const s = g.teams[id].stations.find((s) => s.type === type),
     p = g.players[id];
-  p.x = s.x;
-  p.y = s.y + 70;
+  p.x = s.approach.x;
+  p.y = s.approach.y;
   p.panel = null;
   return p;
 }

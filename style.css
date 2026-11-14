@@ -1,6 +1,6 @@
 :root {
   font-family: system-ui, sans-serif;
-  color: #fff0d6;
+  color: #f2f5f7;
   background: #29232e;
   font-synthesis: none;
 }
@@ -17,18 +17,18 @@ input {
 button {
   border: 2px solid #73505a;
   border-radius: 9px;
-  background: #fff0d6;
+  background: #f2f5f7;
   color: #49313e;
   padding: 9px 13px;
   font-weight: 750;
   cursor: pointer;
 }
 button:hover {
-  background: #ffe0a3;
+  background: #e4f1f4;
 }
 button:focus-visible,
 .selected {
-  outline: 3px solid #f4bd65;
+  outline: 3px solid #64d4db;
   outline-offset: 2px;
 }
 button:disabled {
@@ -54,7 +54,7 @@ nav small {
 }
 #event {
   font-size: 13px;
-  color: #ffe2a4;
+  color: #ecf1f4;
   text-align: center;
 }
 #players {
@@ -131,7 +131,7 @@ nav small {
 progress {
   width: 70px;
   height: 8px;
-  accent-color: #ffd478;
+  accent-color: #77cdac;
 }
 .inventory {
   display: flex;
@@ -168,7 +168,7 @@ progress {
 }
 .task {
   flex: 1;
-  color: #ffe4ad;
+  color: #edf3f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -217,7 +217,7 @@ progress {
   text-align: center;
   pointer-events: none;
   font-size: 13px;
-  color: #fff5df;
+  color: #f4f6f8;
   background: #382835e8;
   border-radius: 8px;
   padding: 8px;
@@ -353,17 +353,17 @@ progress {
 .eyebrow {
   font-size: 11px;
   letter-spacing: 3px;
-  color: #dfb58c;
+  color: #9ed9df;
 }
 h1 {
   font-size: 40px;
   line-height: 1.1;
-  color: #ffe0a4;
+  color: #f1f5f7;
   margin: 14px 0 20px;
 }
 #description {
   line-height: 1.6;
-  color: #dfcec3;
+  color: #dce3e8;
 }
 #actions {
   display: flex;
@@ -489,7 +489,7 @@ h1 {
   font-size: 15px;
 }
 .lock-note {
-  color: #f7ca80;
+  color: #a5e1e2;
   font-size: 14px;
 }
 .stock {
@@ -526,7 +526,7 @@ h1 {
   z-index: 5;
   min-height: 110px;
   background: #342b39;
-  border-top: 3px solid #d8b680;
+  border-top: 3px solid #6baeb5;
   display: flex;
   gap: 15px;
   align-items: center;
@@ -541,7 +541,7 @@ h1 {
   flex: 1;
 }
 #instructor b {
-  color: #f5cf8a;
+  color: #a0e5e3;
 }
 #instructor p {
   margin: 5px 0;
@@ -559,7 +559,7 @@ h1 {
   z-index: 8;
   font-size: 100px;
   font-weight: 950;
-  color: #ffe0a3;
+  color: #e4f1f4;
   text-shadow:
     0 5px 0 #513344,
     0 0 30px #271e2d;
@@ -609,5 +609,57 @@ h1 {
   }
   .order-row {
     font-size: 12px;
+  }
+}
+
+/* Keep long help text inside the card, with navigation buttons always reachable. */
+.menu-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 36px);
+  overflow: hidden;
+}
+#description {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 8px;
+}
+#actions {
+  flex-shrink: 0;
+  width: 100%;
+}
+.brand-art {
+  flex-shrink: 0;
+}
+h1 {
+  flex-shrink: 0;
+}
+.lesson-target {
+  outline: 4px solid #42d5d9 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 7px #193e4866 !important;
+}
+@media (max-height: 800px) {
+  .menu-card {
+    padding: 15px 24px;
+  }
+  .brand-art {
+    height: 70px;
+  }
+  .brand-art canvas {
+    height: 70px;
+    width: auto;
+  }
+  h1 {
+    font-size: 29px;
+    margin: 8px 0 12px;
+  }
+  #actions {
+    margin-top: 12px;
+    gap: 7px;
+  }
+  #actions button {
+    padding: 9px;
   }
 }

@@ -69,8 +69,8 @@ test("owner and rival sign flips preserve entered guests, throttle sabotage and 
   assert.equal(t.customers.length, count);
   const r = g.players[1],
     s = t.stations.find((s) => s.type === "sign");
-  r.x = s.x;
-  r.y = s.y + 70;
+  r.x = s.approach.x;
+  r.y = s.approach.y;
   g.interact(r);
   assert(!t.open);
   tick(g, 0.4);
@@ -108,7 +108,7 @@ test("assistant atomically claims one accepted order and never duplicates manual
     assert(!g.players[0].prep);
   }
 });
-test("assistant waits for accepted orders/ingredients/pickup; raw output is not money", () => {
+test("cook waits for accepted orders/ingredients and produces baked pickup without payment", () => {
   const g = fresh(),
     t = g.teams[0];
   t.money = 300;
@@ -123,16 +123,14 @@ test("assistant waits for accepted orders/ingredients/pickup; raw output is not 
   tick(g, 0.1);
   assert(t.assistant.job);
   const cash = t.money;
-  tick(g, 9);
-  assert.equal(t.assistantOutput.stage, "raw");
+  tick(g, 22);
+  assert.equal(t.pickup.stage, "ready");
   assert.equal(t.money, cash);
   const dough = t.stock.dough;
-  tick(g, 10);
+  tick(g, 5);
   assert.equal(t.stock.dough, dough);
-  assert.equal(t.assistant.state, "Waiting for pickup");
-  visit(g, 0, "assistant");
-  assert.equal(g.players[0].hand.stage, "raw");
-  assert(!g.deliver(g.players[0].hand, t));
+  visit(g, 0, "serving");
+  assert.equal(g.players[0].hand.stage, "ready");
   g.spawnVIP(1);
   g.vips[0].accepted.push(0);
   assert(!t.assistant.job);
@@ -266,8 +264,8 @@ test("flour moves, collides, affects only opponent without stun/drop and cannot 
   g.useItem(p);
   tick(g, 0.4);
   assert(r.flourTime < time);
-  p.x = 140;
-  p.y = 210;
+  p.x = 190;
+  p.y = 170;
   p.faceX = 0;
   p.faceY = -1;
   p.trapCD = 0;

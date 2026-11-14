@@ -243,7 +243,7 @@
     if (next === "help") {
       title.textContent = "From dough to five stars";
       desc.innerHTML =
-        '<div class="help"><p><b>Blue:</b> WASD move · E interact · F rolling pin · Q use held gadget · Left Shift dash · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · / rolling pin · . place banana · Right Shift dash · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task.</p><p>Supplies sells packs of four. Waiter (100) takes orders and carries baked regular pizzas from pickup. Assistant (180) reserves one accepted regular order and assembles raw food in nine seconds; you still bake and serve.</p><p>Q / Period uses your held gadget: banana (12), flour throw (18), or striped sabotage sauce (15). Dirty empty rival tables need 2.5 seconds of held interaction to clean. Flip either entrance sign in person; Closed stops new guests.</p><p>Each VIP in the central courtyard needs personal service: 40 coins and 12 reputation. First to 100 reputation wins. Bankruptcy means no affordable recipe or recoverable paying food remains, not merely zero coins. No free supplies. Escape pauses everyone; M toggles sound.</p></div>';
+        '<div class="help"><p><b>Blue:</b> WASD move · E interact · F rolling pin · Q use held gadget · Left Shift dash · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · / rolling pin · . use held gadget · Right Shift dash · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task. Tutorial uses turquoise routes and highlights the next window button.</p><p>Supplies sells packs of four. Waiter (100) takes orders and carries baked regular pizzas from pickup. Cook (180) reserves a regular order, prepares it, walks to the shared oven, bakes and carries ready food to Pickup. Collect it yourself or let the waiter deliver. At Dough, empty hands and no valid selection automatically assign the most urgent unclaimed regular order.</p><p>Q / Period uses your held gadget: banana (12), flour throw (18), or striped sabotage sauce (15). Dirty empty rival tables need 2.5 seconds of held interaction to clean. Blue gadget stalls are above the central VIP table; Red stalls are below. Hire staff beside your kitchen. Flip the sign beside either real entrance door; Closed stops new guests while everyone inside can leave.</p><p>Each VIP in the central courtyard needs personal service: 40 coins and 12 reputation. First to 100 reputation wins. Bankruptcy means no affordable recipe or recoverable paying food remains, not merely zero coins. No free supplies. Escape pauses everyone; M toggles sound.</p></div>';
       buttons([["Back", () => show(helpReturn)]]);
     }
     if (next === "pause") {
@@ -619,6 +619,12 @@
         RivalRenderer.food(c, p.hand, 130, 100, 3.5);
       }
     }
+    document
+      .querySelectorAll(".lesson-target")
+      .forEach((el) => el.classList.remove("lesson-target"));
+    const hint = game.tutorial?.uiTarget;
+    if (hint && state === "play")
+      views[0].el.querySelector(hint)?.classList.add("lesson-target");
     document.getElementById("event").textContent =
       game.noticeTime > 0
         ? game.notice

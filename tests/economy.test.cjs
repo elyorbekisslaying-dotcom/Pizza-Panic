@@ -34,7 +34,7 @@ function run(policy, seed) {
   function visit(type) {
     p.panel = null;
     const s = t.stations.find((s) => s.type === type);
-    if (!walk({ x: s.x, y: s.y + 70 })) return false;
+    if (!walk(s.approach)) return false;
     g.interact(p);
     return true;
   }
@@ -59,7 +59,7 @@ function run(policy, seed) {
     }
     let o;
     if (t.assistant) {
-      if (!t.assistantOutput) {
+      if (!t.pickup) {
         tick(g, 0.25);
         const available = t.customers.find(
           (c) => c.state === "accepted" && !c.departing,
@@ -77,8 +77,8 @@ function run(policy, seed) {
         }
         continue;
       }
-      o = g.order(t.assistantOutput.order);
-      visit("assistant");
+      o = g.order(t.pickup.order);
+      visit("serving");
     } else {
       o = t.customers
         .filter((c) => !c.departing && c.state !== "entering")
@@ -110,9 +110,11 @@ function run(policy, seed) {
       }
     }
     if (!p.hand) continue;
-    visit("oven");
-    tick(g, 3.1);
-    g.interact(p);
+    if (p.hand.stage !== "ready") {
+      visit("oven");
+      tick(g, 3.1);
+      g.interact(p);
+    }
     if (!p.hand) continue;
     const cash = t.money;
     if (t.waiter) {
