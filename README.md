@@ -25,7 +25,7 @@ Competitive matches, Restart and Rematch begin with **3 → 2 → 1 → GO!**. T
 | Activate selected item/button                             | E      | Enter       |
 | Close own window                                          | I or Q | O or Period |
 
-Escape pauses both restaurants. M toggles sound. Losing browser focus pauses play. Settings provides sound, volume and the control reference. Sound starts after a user gesture. Returning to Main menu discards the current match; restart clears orders, reservations, projectiles, visual effects, items and timers.
+There is no top title/event/pause toolbar during play. Escape pauses both restaurants. M toggles sound. Losing browser focus pauses play. Settings provides sound, volume and the control reference. Sound starts after a user gesture. Returning to Main menu discards the current match; restart clears orders, reservations, projectiles, visual effects, items and timers.
 
 Each player has an independent camera, HUD and keyboard window focus. A window stops only its owner's movement. Mouse clicks work in both panels; ingredient drag-and-drop uses pointer coordinates relative to the displayed dough. Cancelled drags spend nothing. Icons show stock, empty ingredients, coins, carried food/gadgets and ability cooldown shading. The held-gadget label shows its use key.
 
@@ -120,6 +120,7 @@ node tests/tutorial.test.cjs
 node tests/playtest.test.cjs
 node tests/economy.test.cjs
 node tests/shared-kitchen.test.cjs
+node tests/staff-stress.test.cjs
 ```
 
 Browser tests use the cloud environment's existing Playwright and Chromium, not runtime game dependencies:

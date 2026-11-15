@@ -303,7 +303,6 @@
     unlock();
     show("play");
   }
-  document.getElementById("pause").onclick = () => show("pause");
   function choices(p) {
     const t = game.teams[p.id];
     if (p.panel === "supply")
@@ -625,12 +624,6 @@
         target?.scrollIntoView({ block: "nearest" });
       views[0].lessonHint = hint;
     } else views[0].lessonHint = null;
-    document.getElementById("event").textContent =
-      game.noticeTime > 0
-        ? game.notice
-        : game.vip
-          ? "VIP waiting in the courtyard"
-          : "";
   }
   for (const v of views) {
     v.hud.addEventListener("click", (e) => {

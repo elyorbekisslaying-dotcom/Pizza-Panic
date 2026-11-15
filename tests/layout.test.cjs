@@ -195,6 +195,18 @@ fs.mkdirSync(out, { recursive: true });
   });
   await page.waitForTimeout(150);
   await page.screenshot({ path: path.join(out, "shared-kitchens.png") });
+  assert.equal(await page.locator("#match nav, #pause, #event").count(), 0);
+  assert((await page.locator(".player.blue").boundingBox()).y < 10);
+  await page.keyboard.press("Escape");
+  assert.equal(await page.evaluate(() => rivalTest.state), "pause");
+  const pausedTime = await page.evaluate(() => rivalTest.game.time);
+  await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => rivalTest.game.time), pausedTime);
+  await page.keyboard.press("Escape");
+  assert.equal(await page.evaluate(() => rivalTest.state), "play");
+  console.log(
+    "PASS top toolbar absent, kitchens start at screen top, Escape still pauses and resumes",
+  );
   // Actual keyboard dispatch leaves attack/dash inert, window I/O still works.
   for (const key of ["KeyF", "Slash", "ShiftLeft", "ShiftRight"])
     await page.keyboard.press(key);
