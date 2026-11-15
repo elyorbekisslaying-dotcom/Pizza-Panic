@@ -41,8 +41,8 @@
       (id ? "Red" : "Blue") +
       ' kitchen viewport"></canvas><div class="toast" role="status" hidden></div><section class="panel" hidden></section></div><div class="controls">' +
       (id
-        ? "Arrows move · Enter interact · / swing · . use item · RShift dash · O window"
-        : "WASD move · E interact · F swing · Q use item · LShift dash · I window") +
+        ? "Arrows move · Enter interact · . use item · O window"
+        : "WASD move · E interact · Q use item · I window") +
       "</div>";
     players.append(el);
     return {
@@ -79,6 +79,14 @@
     clearDrag();
     refresh();
   };
+  document.getElementById("collapse-instructor").onclick = () => {
+    const collapsed = document
+      .getElementById("instructor")
+      .classList.toggle("collapsed");
+    const button = document.getElementById("collapse-instructor");
+    button.textContent = collapsed ? "Expand" : "Collapse";
+    button.setAttribute("aria-expanded", String(!collapsed));
+  };
   document.getElementById("leave-tutorial").onclick = () => show("menu");
   const brand = document.getElementById("brand").getContext("2d");
   PizzaArt.chef(brand, 65, 65, 1, 3, false, Kitchen.colors[0]);
@@ -109,7 +117,6 @@
     o.frequency.value =
       {
         serve: 650,
-        punch: 110,
         slip: 270,
         event: 180,
         ready: 880,
@@ -117,7 +124,6 @@
         vip: 740,
         star: 990,
         win: 1200,
-        dash: 300,
         count: 420,
         go: 840,
         lost: 140,
@@ -202,7 +208,7 @@
     if (next === "graduated") {
       title.textContent = "Ready for the rivalry!";
       desc.innerHTML =
-        "<p>You cooked, served, hired staff and tried sabotage. Competitive Mode is unlocked.</p><p>First to 100 reputation wins. If no affordable recipe or recoverable paying food remains, bankruptcy ends the match. No free supplies or loans.</p><p>Red uses Arrows, Enter, /, Period and Right Shift. Both players use the same systems.</p>";
+        "<p>You cooked, served, hired staff and tried sabotage. Competitive Mode is unlocked.</p><p>First to 100 reputation wins. If no affordable recipe or recoverable paying food remains, bankruptcy ends the match. No free supplies or loans.</p><p>Red uses Arrows, Enter, Period and O. Both players use the same systems.</p>";
       buttons([
         ["Competitive Mode", start],
         ["Repeat Tutorial", startTutorial],
@@ -243,7 +249,7 @@
     if (next === "help") {
       title.textContent = "From dough to five stars";
       desc.innerHTML =
-        '<div class="help"><p><b>Blue:</b> WASD move · E interact · F rolling pin · Q use held gadget · Left Shift dash · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · / rolling pin · . use held gadget · Right Shift dash · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task. Tutorial uses turquoise routes and highlights the next window button.</p><p>Supplies sells packs of four. Waiter (100) takes orders and carries baked regular pizzas from pickup. Cook (180) reserves a regular order, prepares it, walks to the shared oven, bakes and carries ready food to Pickup. Collect it yourself or let the waiter deliver. At Dough, empty hands and no valid selection automatically assign the most urgent unclaimed regular order.</p><p>Q / Period uses your held gadget: banana (12), flour throw (18), or striped sabotage sauce (15). Dirty empty rival tables need 2.5 seconds of held interaction to clean. Blue gadget stalls are above the central VIP table; Red stalls are below. Hire staff beside your kitchen. Flip the sign beside either real entrance door; Closed stops new guests while everyone inside can leave.</p><p>Each VIP in the central courtyard needs personal service: 40 coins and 12 reputation. First to 100 reputation wins. Bankruptcy means no affordable recipe or recoverable paying food remains, not merely zero coins. No free supplies. Escape pauses everyone; M toggles sound.</p></div>';
+        '<div class="help"><p><b>Blue:</b> WASD move · E interact · Q use held gadget · I open/close window.</p><p><b>Red:</b> Arrows move · Enter interact · . use held gadget · O open/close window.</p><p><b>Windows:</b> your movement keys select, E / Enter adds or buys. Select Confirm to assemble. Q / . closes; I / O also closes. Mouse click or drag ingredients onto the dough.</p><p>Greet a seated guest → Dough → Toppings → add recipe ingredients → Confirm → Oven (3s) → collect within 12s → serve the exact seat. Orders terminal changes your selected task. Tutorial uses turquoise routes and yellow highlights on the next window button.</p><p>Supplies sells packs of four. Waiter (100) takes orders and carries baked regular pizzas from the shared Pickup queue. Up to four cooks (180 each) each reserve a separate regular order, prepare it, walk to the shared four-slot oven, bake and carry ready food to Pickup. Collect it yourself or let the waiter deliver. At Dough, empty hands and no valid selection automatically assign the most urgent unclaimed regular order.</p><p>Q / Period uses your held gadget: banana (12), flour throw (18), or striped sabotage sauce (15). Dirty empty rival tables need 2.5 seconds of held interaction to clean. Blue gadget stalls are above the central VIP table; Red stalls are below. Hire staff beside your kitchen. Flip the sign beside either real entrance door; Closed stops new guests while everyone inside can leave.</p><p>Each VIP in the central courtyard needs personal service: 40 coins and 12 reputation. First to 100 reputation wins. Bankruptcy means no affordable recipe or recoverable paying food remains, not merely zero coins. No free supplies. Escape pauses everyone; M toggles sound.</p></div>';
       buttons([["Back", () => show(helpReturn)]]);
     }
     if (next === "pause") {
@@ -436,24 +442,12 @@
         (o ? Kitchen.recipes[o.recipe].name : "Greet a waiting guest") +
         '">' +
         (o
-          ? Kitchen.recipes[o.recipe].name + " · " + game.status(o, p.id)
+          ? icon("recipe" + o.recipe) +
+            Kitchen.recipes[o.recipe].name +
+            " · " +
+            game.status(o, p.id)
           : "Greet a waiting guest") +
         "</span>" +
-        [
-          ["pin", p.punchCD / 1.2],
-          ["dash", p.dashCD / 5],
-        ]
-          .map(
-            ([k, ratio]) =>
-              '<span class="ability" title="' +
-              k +
-              '">' +
-              icon(k) +
-              '<i style="height:' +
-              Math.min(100, ratio * 100) +
-              '%"></i></span>',
-          )
-          .join("") +
         "</div>";
       if (v.hudSignature !== hudHtml) {
         v.hud.innerHTML = hudHtml;
@@ -488,6 +482,7 @@
         '">' +
         label +
         "</button>";
+      v.panel.classList.toggle("assembly-panel", p.panel === "assembly");
       let content = "";
       if (p.panel === "supply") {
         content = Kitchen.stockKeys
@@ -623,8 +618,13 @@
       .querySelectorAll(".lesson-target")
       .forEach((el) => el.classList.remove("lesson-target"));
     const hint = game.tutorial?.uiTarget;
-    if (hint && state === "play")
-      views[0].el.querySelector(hint)?.classList.add("lesson-target");
+    if (hint && state === "play") {
+      const target = views[0].el.querySelector(hint);
+      target?.classList.add("lesson-target");
+      if (views[0].lessonHint !== hint)
+        target?.scrollIntoView({ block: "nearest" });
+      views[0].lessonHint = hint;
+    } else views[0].lessonHint = null;
     document.getElementById("event").textContent =
       game.noticeTime > 0
         ? game.notice
@@ -751,9 +751,7 @@
           game.interact(p);
         else game.say(p, "Approach Orders, Supplies or Toppings");
       }
-      if (e.code === c.punch) game.punch(p);
       if (e.code === c.trap) game.useItem(p);
-      if (e.code === c.dash) game.dash(p);
       refresh();
     });
   });

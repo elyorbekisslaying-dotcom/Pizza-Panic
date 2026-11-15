@@ -1,58 +1,31 @@
-# Playtest-fix validation
+# Shared kitchen update — validation
+
+The game has no runtime packages, build step, external services or downloaded assets. Development tests use Node.js 24.22.1, Python 3.12.14, the environment's Playwright and Chromium 156. These are automated tests, not a manual two-person playtest.
 
 ## Executed checks
 
-This report supersedes the previous raw-output assistant build. Runtime dependencies remain zero; tests use Node and the environment's Playwright/Chromium.
+- `node tests/game.test.cjs`: 21 groups: both cooking systems, payment validation, accessible routes, ingredients, cancellation, waiter, bananas, removed attack/dash API and bindings, rats, VIP, simultaneous movement, collisions and victory.
+- `node tests/jam.test.cjs`: 12 groups: countdown freeze, seating, signs, atomic cook/player reservations, stock, waiter tasks, cancellation throughout the food lifecycle, flour, cleaning, VIP, recovery/bankruptcy and departing guests.
+- `node tests/tutorial.test.cjs`: complete 22-lesson tutorial using collision-aware movement, cooking, staff, gadgets, cleaning, rat recovery and personal VIP service. Includes burned-food and lesson recovery and collection routing to an alternate occupied oven bay.
+- `node tests/playtest.test.cjs`: 16 groups: both kitchens' geometry and approaches, central oven collisions, doorway/market access, moving staff, manual oven collection, cancellation/burning, automatic/manual/VIP priority, staff delivery victories for both sides, stain stability, tutorial routing, UI suppression, recovery and reset.
+- `node tests/economy.test.cjs`: four seeded production/economy policies using real purchases, movement and deliveries, with natural rats. Includes expected bankruptcy for reckless spending. These are passive-rival script benchmarks, not competitive balance claims.
+- `node tests/shared-kitchen.test.cjs`: six groups, three per side. Four distinct cook claims and work positions; fifth hire rejected without charge; actual stock consumption; parallel baking; multiple queued dishes; selected-order collection; cancellation; once-only payment; full-oven waiting without repeated spending; independent bake/burn timers; manual collection without a retained NPC copy; departure cleanup; ten actual waiter deliveries to victory, frozen winner state, and empty resources on reset. Physical dish holders and cook claims are checked for duplicates while stepping. Cook routes are checked against production collisions.
+- `GAME_URL=http://127.0.0.1:8000/ node tests/browser.test.cjs`: two complete tutorials in Chromium, actual mouse drag/cancel and keyboard assembly, both players' cooking, lesson recovery, saved/session-only unlock, audio settings, countdown, gadgets, cleaning, VIP, bankruptcy, pause, restart, rematch and resize. No page or console errors.
+- `GAME_URL=http://127.0.0.1:8000/ node tests/visual.test.cjs`: production flour/stain pixel tests, help scrolling at several sizes, tutorial routes and button highlights, staff victories, pause and cleanup. Repeats the 16 playtest transition groups inside Chromium. No page errors.
+- `GAME_URL=http://127.0.0.1:8000/ node tests/layout.test.cjs`: 1366×768, 1024×600, 800×600 and 960×540. Real sauce drag, keyboard cheese addition, reachable Confirm assembly, collapsed/expanded instructor, yellow tutorial outline, hidden world route while a window action is required, and no instructor/window overlap. Four-cook production simulations reach ten actual deliveries for Blue (188.7 simulated seconds) and Red (190.25 seconds); no duplicate reservations or physical dishes. Real F, Slash and Shift key events leave removed abilities absent; I still opens Orders. Pixel comparison verifies fully invisible and visible frames during immunity. No page errors.
 
-- `node tests/game.test.cjs`: 21 legacy regression groups, updated approach coordinates and slower waiter timing. Includes actual cooking, payment, combat, theft/recovery, VIP competition, movement/collision, cancellation, bankruptcy and victory.
-- `node tests/jam.test.cjs`: 12 groups. Countdown, 2/4/6 seating, signs, cook/player reservation races, ingredient limits, baked pickup, waiter service stops, cancellation at eleven food-holder stages, flour collisions/immunity, dirty seating/cleaning/protection, VIP groups, insolvency and walking exits.
-- `node tests/tutorial.test.cjs`: all 22 lessons through actual collision-aware player movement, complete cooking, auto-assignment, autonomous cook/oven/pickup/waiter delivery, gadgets, cleaning, rat recovery and personal VIP service. Burned-food and cleanup chapter recovery also checked.
-- `node tests/playtest.test.cjs`: 16 groups covering both restaurants' accessible approaches, purchase ownership, clear central lane, equivalent market routes, doorway crossings while Closed, full moving staff cycles, once-only payment, occupied oven and pickup, player collection from the cook's oven, cancellation at each cook phase, burned food, automatic assignment, manual/VIP priority, reservation races, ten genuine deliveries to victory for each team, stable randomized stains, route caching and moved targets, UI-only hints, drop/discard recovery, and reset cleanup.
-- `tests/browser.test.cjs`: two complete practical tutorial runs using keyboard and pointer controls, including deliberate burn/restart, saved unlock/reload and unavailable-localStorage fallback. Ingredient drag cancellation/drop, both cooking controls, auto-selection, new cook lesson, gadgets, held cleanup, rat recovery, VIP restocking after theft, countdown, resize, audio gain/mute, pause, restart, bankruptcy and rematch. No page/console errors. Tested at 1366 × 768 and 1920 × 1080.
-- `tests/visual.test.cjs`: Chromium pixel measurements, stable/clipped stains under two camera transforms, route/button highlighting, help scrolling with Back visible at heights 768/600/500, local flour and frozen pause timer, effect expiry/menu cleanup, simultaneous Blue/Red staff cycles and separate genuine staff victories. Repeats all 16 risky-transition groups in Chromium as well as Node. No page errors.
-- JavaScript syntax, formatting and `git diff --check`. Distribution archive integrity, root `index.html`, local references and contents matched against the committed checkout.
+## Visual inspection and correction
 
-Browser fixtures sometimes position chefs near a station, accelerate time, or seed stock/customers to isolate transitions. They never fabricate a delivery or set reputation/tutorial completion. The dedicated movement tutorial traverses the map. Repeating model transitions inside Chromium is engine regression coverage, not a claim of manual two-person playtesting.
+Inspected screenshots of short-screen assembly (960×540), the two shared kitchens and four separate cook positions, tutorial purchase highlighting, and the larger preparation counter. The first short-screen drag check caught ingredient controls clipped by the fixed footer. The compact assembly grid now puts dough beside ingredients; the repeated drag and keyboard checks pass. Selected oven bays have a team-colored outline and numbered contextual hint. Static kitchen station nameplates are removed; hire/gadget labels and prices remain.
 
-## Visual measurements
+## Reproduction
 
-The flour test draws the production mask on a transparent canvas and counts pixels with alpha above 230/255 at 0.1 seconds after impact. The center has alpha 252/255.
+From the existing checkout, start `python3 -m http.server 8000 --bind 127.0.0.1`, then run the commands above. Browser screenshots default to `/tmp/pizza-jam`, `/tmp/pizza-playtest` and `/tmp/pizza-layout`; `ARTIFACT_DIR` can override their location. `CHROMIUM_PATH` can override `/usr/bin/chromium`. Tests use the explicit `?test=1` hook; normal play does not expose it.
 
-| Gameplay canvas | Dense initial coverage |
-| --------------- | ---------------------: |
-| 450 × 350       |                 80.55% |
-| 670 × 520       |                 80.63% |
-| 950 × 830       |                 80.70% |
-
-The strong phase lasts about 0.85 seconds; the mask then fades/falls and is fully gone by 2.6 seconds. A 0.06-second onset avoids an instantaneous full-monitor flash. The untouched viewport has no mask; a small world-space dust mark on the hit chef remains visible as a shared hit cue. HUD and Pause are DOM controls outside the gameplay mask.
-
-Stains contain 36 stored, varied droplets. Rendering does not mutate their data; two translated views produce identical pixels. The clipping test finds zero colored pixels outside the tabletop interior. Cleaning reduces visibility and completion clears the stored pattern. New contamination generates another pattern.
-
-Screenshots inspected include the entire world, central markets, dense flour, paused flour, a tutorial route, highlighted purchase button, assembly, full-HD competition and scrolling help. Inspection caught and fixed overlap between the Red market heading and lower stall labels, and between Pickup's label and the waiter station. No user screenshot files accompanied the pasted request, so no direct before/after comparison to those screenshots was possible.
-
-## Staff and route measurements
-
-Player walking speed is 235 px/s, waiter 115 px/s (48.9%), cook 110 px/s. Waiter service pauses are 0.9 seconds. Cook preparation is nine seconds, baking three seconds, followed by a 0.6-second collection pause that also permits player collection.
-
-Isolated browser trials supplied twelve units of each ingredient and admitted one ordinary customer at a time. Blue won after ten actual staff deliveries in 468.8 simulated seconds; Red in 472.5 seconds. These fixtures verify complete autonomous service and symmetry, not optimal play or economic balance.
-
-From the two restaurant/courtyard entrances, corresponding gadget routes differ by at most 40 pixels on the 20-pixel navigation grid. Both zones have identical ownership and prices; the central aisle and VIP approaches remain open. Every station has an explicit accessible approach. Navigation caches the obstacle grid and rebuilds when obstacle geometry changes; tutorial paths refresh on meaningful movement, target changes or a bounded interval, rather than running a fresh search each frame.
-
-## Reproducible economy trials
-
-`node tests/economy.test.cjs` uses seeds 110–113, real movement, purchases, food preparation, deliveries and natural rats. The rival is closed/passive and VIPs are disabled. The waiter policy deliberately waits for each delivery instead of working in parallel. These are script benchmarks, not competitive balance claims.
-
-| Policy                   | Result     | Duration | Served / unhappy | First hire | Payments | Packs spent | End cash |
-| ------------------------ | ---------- | -------: | ---------------: | ---------: | -------: | ----------: | -------: |
-| Manual                   | Five stars |  183.9 s |           10 / 0 |          — |      217 |          76 |      201 |
-| Waiter when affordable   | Bankruptcy |  488.9 s |          10 / 11 |     43.8 s |      217 |         170 |        7 |
-| Cook immediately at 180  | Bankruptcy |  138.7 s |            7 / 0 |    138.7 s |      150 |          26 |        4 |
-| Restock before cook hire | Five stars |  204.3 s |           10 / 0 |    173.3 s |      216 |          76 |       20 |
-
-The slower waiter makes the serial waiting policy lose customers and eventually run out of resources. Manual service and concurrent kitchen work remain important. The reckless cook hire still spends the last usable resources and correctly fails before production. No prices, free subsidies or hidden aid were introduced to force these scripts to win. The safely funded cook worked for 19.1 seconds in its late-hire trial; the waiter was busy for 267.6 seconds in its trial.
+Fixtures may seed customers/stock, position players at stations, accelerate simulation time or enable the tutorial-completed preference to isolate UI checks. Payments and victory still come from production delivery code. The complete tutorial movement suite follows collision-safe routes instead of teleporting through lessons.
 
 ## Remaining limits
 
-Two-person subjective balance, real keyboard rollover, audible sound quality and browsers other than Chromium still need human testing. Automated economic rivals are passive. Direct `file://` navigation is blocked by this managed Chromium's `ERR_BLOCKED_BY_ADMINISTRATOR` policy; browser tests use local HTTP. All runtime resources remain local classic scripts/styles, with no fetch, modules or service dependencies. Direct opening should additionally be confirmed in an unrestricted desktop browser.
+Human two-player balance, keyboard rollover, audible sound quality and browsers other than Chromium remain unverified. Four cooks still share one waiter; a large queue can outpace service, and normal customer patience continues. Tests with abundant stock and long patience verify task correctness, not economic balance.
 
-No fires, extra trap types, extra tables, multiple cooks per restaurant, debt system, mobile controls or itch.io presentation work were added.
+Direct `file://` navigation was attempted and rejected by this managed Chromium with `ERR_BLOCKED_BY_ADMINISTRATOR`; functional browser checks used local HTTP. All game resources remain local classic JavaScript/CSS, without fetch, modules or external dependencies. Confirm double-click launch separately in an unrestricted desktop browser.

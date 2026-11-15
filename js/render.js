@@ -102,17 +102,59 @@ const RivalRenderer = (() => {
       box(c, x - 33, y - 24, 66, 42, 5, "#dce5df", ink);
       GameIcons.draw(c, "pin", x, y);
       box(c, x - 72, y + 34, 144, 24, 5, "#31464b");
-      text(
-        c,
-        t.assistant ? "Cook bench" : "Hire cook · 180",
-        x,
-        y + 51,
-        12,
-        "#f4f6f7",
-      );
+      text(c, "Cooks " + t.cooks.length + "/4 · 180", x, y + 51, 12, "#f4f6f7");
       return;
     }
 
+    if (type === "topping") {
+      box(c, x - s.w / 2, y - 30, s.w, 60, 9, Kitchen.colors[t.id], ink);
+      box(c, x - s.w / 2 + 5, y - 26, s.w - 10, 48, 5, "#d9b788", ink);
+      s.workPoints.forEach((point, i) => {
+        const px = point.x;
+        box(c, px - 30, y - 18, 60, 36, 4, "#f2dfba", "#aa875f");
+        GameIcons.draw(
+          c,
+          ["sauce", "cheese", "vegetables", "dough"][i],
+          px,
+          y,
+          0.65,
+        );
+      });
+      return;
+    }
+    if (type === "oven") {
+      box(c, x - s.w / 2, y - s.h / 2, s.w, s.h, 12, "#9c5252", ink);
+      s.slots.forEach((slot, index) => {
+        const f = t.ovens[index];
+        box(
+          c,
+          slot.x - 39,
+          slot.y - 25,
+          78,
+          50,
+          7,
+          f?.stage === "burned" ? "#251e25" : "#493740",
+          "#c7b6a7",
+        );
+        text(c, String(index + 1), slot.x - 28, slot.y - 8, 11, "#f9dfb8");
+        if (f) {
+          food(c, f, slot.x, slot.y, 0.7);
+          bar(
+            c,
+            slot.x - 31,
+            slot.y + 18,
+            62,
+            f.stage === "baking"
+              ? 1 - f.timer / 3
+              : f.stage === "ready"
+                ? f.timer / 12
+                : 0,
+            f.stage === "ready" ? "#74c99b" : "#e6a856",
+          );
+        }
+      });
+      return;
+    }
     oval(c, x, y + 29, 43, 10, "#452b3730");
     box(c, x - 38, y - 30, 76, 60, 8, Kitchen.colors[t.id], ink);
     box(c, x - 34, y - 26, 68, 45, 6, "#f1d6b1", ink);
@@ -121,21 +163,6 @@ const RivalRenderer = (() => {
       ["sauce", "cheese", "vegetables"].forEach((k, i) =>
         GameIcons.draw(c, k, x - 23 + i * 23, y, 0.65),
       );
-    if (type === "oven") {
-      box(c, x - 29, y - 20, 58, 36, 8, "#4c333a", ink);
-      box(c, x - 27, y - 25, 54, 5, 2, "#b9bec0");
-      if (t.oven) {
-        food(c, t.oven, x, y, 0.85);
-        bar(
-          c,
-          x - 30,
-          y + 22,
-          60,
-          t.oven.stage === "baking" ? 1 - t.oven.timer / 3 : t.oven.timer / 12,
-        );
-        text(c, t.oven.stage, x, y - 40, 13);
-      }
-    }
     if (type === "terminal") {
       box(c, x - 26, y - 21, 52, 34, 4, "#483b4e", ink);
       box(c, x - 22, y - 17, 44, 26, 2, "#add7bd");
@@ -156,12 +183,24 @@ const RivalRenderer = (() => {
     }
     if (type === "serving") {
       oval(c, x, y, 28, 17, "#fff1d2", ink);
-      if (t.pickup) food(c, t.pickup, x, y, 0.75);
+      t.pickup
+        .slice(0, 4)
+        .forEach((f, i) =>
+          food(
+            c,
+            f,
+            x - 18 + (i % 2) * 30,
+            y - 9 + Math.floor(i / 2) * 18,
+            0.45,
+          ),
+        );
+      text(c, String(t.pickup.length), x + 29, y - 23, 16, "#fff6d3");
     }
     if (["banana", "flour", "bottle"].includes(type))
       GameIcons.draw(c, type, x, y);
     if (type === "rats") rat(c, { x, y, phase: "in" }, 0);
     if (type === "waiter") person(c, x, y - 5, "#9272a1");
+    if (!["banana", "flour", "bottle", "rats", "waiter"].includes(type)) return;
     const labelY = y + (type === "serving" ? -56 : 34);
     box(c, x - 66, labelY, 132, 24, 5, "#483141");
     text(
@@ -192,16 +231,8 @@ const RivalRenderer = (() => {
     c.restore();
   }
   function chef(c, p, time) {
-    if (p.hidden) return;
+    if (p.hidden || (p.immune > 0 && Math.floor(time * 10) % 2 === 1)) return;
     c.save();
-    if (p.immune) c.globalAlpha = Math.floor(time * 5) % 2 ? 0.58 : 1;
-    if (p.immune) {
-      c.strokeStyle = "#fff8c8";
-      c.lineWidth = 4;
-      c.beginPath();
-      c.ellipse(p.x, p.y, 28, 35, 0, 0, Math.PI * 2);
-      c.stroke();
-    }
     const hold = () => {
       const x = p.x + p.faceX * 23,
         y = p.y + p.faceY * 21 + 5;
@@ -231,18 +262,6 @@ const RivalRenderer = (() => {
           5,
           "#f0eddf",
         );
-    }
-    if (p.attack) {
-      const a = p.attack,
-        angle =
-          Math.atan2(a.y, a.x) +
-          (a.age < 0.12 ? -0.8 * (1 - a.age / 0.12) : a.age > 0.26 ? 0.4 : 0);
-      c.save();
-      c.translate(p.x, p.y);
-      c.rotate(angle);
-      oval(c, 21, 0, 6, 5, "#efac7b", ink);
-      GameIcons.draw(c, "pin", 37, 0, 0.8);
-      c.restore();
     }
     if (p.prep) bar(c, p.x - 25, p.y - 45, 50, 1 - p.prep.left / 1.2);
     if (p.cleaning) bar(c, p.x - 28, p.y - 50, 56, 1 - p.cleaning.left / 2.5);
@@ -385,8 +404,7 @@ const RivalRenderer = (() => {
           text(c, "T" + (seat.table + 1) + " / " + seat.place, x, y + 39, 11);
         }
       }
-      if (t.assistant) {
-        const a = t.assistant;
+      for (const a of t.cooks) {
         PizzaArt.chef(
           c,
           a.x,
@@ -640,6 +658,13 @@ const RivalRenderer = (() => {
     world(c, g);
     const s = g.nearest(p);
     if (s && !p.panel) {
+      if (s.type === "oven") {
+        const slot = g.teams[id].stations.find((place) => place.type === "oven")
+          .slots[s.slot];
+        c.strokeStyle = Kitchen.colors[id];
+        c.lineWidth = 4;
+        c.strokeRect(slot.x - 40, slot.y - 26, 80, 52);
+      }
       box(c, p.x - 90, p.y - 77, 180, 25, 5, "#edf2f4");
       text(
         c,
@@ -651,7 +676,12 @@ const RivalRenderer = (() => {
               ? "VIP"
               : s.type === "table"
                 ? "Hold to clean"
-                : labels[s.type]),
+                : s.type === "oven"
+                  ? "Oven slot " +
+                    (s.slot + 1) +
+                    " · " +
+                    (g.teams[p.id].ovens[s.slot]?.stage || "empty")
+                  : labels[s.type]),
         p.x,
         p.y - 60,
         12,

@@ -41,7 +41,7 @@ const RivalGame = (() => {
         open: true,
         signEnemyCD: 0,
         signFX: 0,
-        assistant: null,
+        cooks: [],
         history: [],
         alerts: [],
         rep: 0,
@@ -51,8 +51,8 @@ const RivalGame = (() => {
         seats: Kitchen.seats(id),
         customers: [],
         nextCustomer: 0,
-        oven: null,
-        pickup: null,
+        ovens: Array(4).fill(null),
+        pickup: [],
         waiter: null,
         ratCD: 0,
         served: 0,
@@ -89,11 +89,7 @@ const RivalGame = (() => {
         cursor: 0,
         stun: 0,
         immune: 0,
-        punchCD: 0,
-        dashCD: 0,
-        dashTime: 0,
         trapCD: 0,
-        attack: null,
         flourTime: 0,
         flourImmune: 0,
         cleaning: null,
@@ -384,7 +380,18 @@ const RivalGame = (() => {
     }
     nearest(p) {
       return [
-        ...this.teams[p.id].stations.filter((s) => s.type !== "storage"),
+        ...this.teams[p.id].stations
+          .filter((s) => s.type !== "storage")
+          .flatMap((s) =>
+            s.type === "oven"
+              ? s.slots.map((slot, index) => ({
+                  ...s,
+                  ...slot.approach,
+                  approach: slot.approach,
+                  slot: index,
+                }))
+              : [s],
+          ),
         ...this.teams[1 - p.id].stations.filter((s) => s.type === "sign"),
         ...this.teams[p.id].tables.filter((t) => t.dirty),
         ...this.teams[p.id].seats.filter(
@@ -393,9 +400,13 @@ const RivalGame = (() => {
         ...this.vipSeats,
       ]
         .filter(
-          (s) => distance(p, s) < (s.type === "table" ? s.w / 2 + 80 : 92),
+          (s) =>
+            distance(p, s.approach || s) <
+            (s.type === "table" ? s.w / 2 + 80 : 92),
         )
-        .sort((a, b) => distance(p, a) - distance(p, b))[0];
+        .sort(
+          (a, b) => distance(p, a.approach || a) - distance(p, b.approach || b),
+        )[0];
     }
     pizzaExists(id, owner) {
       return (
@@ -406,10 +417,10 @@ const RivalGame = (() => {
         this.teams.some(
           (t) =>
             t.id === owner &&
-            (t.oven?.order === id ||
-              t.pickup?.order === id ||
+            (t.ovens.some((food) => food?.order === id) ||
+              t.pickup.some((food) => food.order === id) ||
               t.waiter?.pizza?.order === id ||
-              t.assistant?.job?.order === id),
+              t.cooks.some((a) => a.job?.order === id)),
         ) ||
         this.drops.some((d) => d.owner === owner && d.item.order === id)
       );
@@ -493,22 +504,25 @@ const RivalGame = (() => {
     status(o, id) {
       const p = this.players[id],
         t = this.teams[id];
-      if (t.assistant?.job?.order === o.id)
+      const cook = t.cooks.find((a) => a.job?.order === o.id);
+      if (cook)
         return (
-          (t.assistant.food?.stage === "ready" ||
-          (t.oven?.order === o.id && t.oven.stage === "ready")
+          (cook.food?.stage === "ready" ||
+          t.ovens.some((f) => f?.order === o.id && f.stage === "ready")
             ? "Ready · "
             : "") +
-          "Cook · " +
-          t.assistant.state
+          "Cook " +
+          (cook.index + 1) +
+          " · " +
+          cook.state
         );
       if (p.prep?.order === o.id) return "Player preparing";
       if (t.waiter?.pizza?.order === o.id) return "Being delivered";
-      if (t.pickup?.order === o.id) return "Ready at pickup";
+      if (t.pickup.some((f) => f.order === o.id)) return "Ready at pickup";
       const a = [
         p.hand,
         p.prep,
-        t.oven,
+        ...t.ovens,
         ...this.drops.filter((d) => d.owner === id).map((d) => d.item),
       ].find((i) => i?.order === o.id);
       return a
@@ -584,11 +598,10 @@ const RivalGame = (() => {
         if (p.panel === "assembly" && !p.hand) p.panel = null;
       }
       for (const t of this.teams) {
-        for (const key of ["oven", "pickup"])
-          if (t[key]?.order === id) t[key] = null;
-        if (t.assistant?.job?.order === id) {
-          this.releaseCook(t);
-        }
+        t.ovens = t.ovens.map((f) => (f?.order === id ? null : f));
+        t.pickup = t.pickup.filter((f) => f.order !== id);
+        for (const a of t.cooks)
+          if (a.job?.order === id) this.releaseCook(t, a);
         if (t.waiter?.pizza?.order === id) t.waiter.pizza = null;
         if (t.waiter?.target === id) {
           t.waiter.task = "idle";
@@ -646,12 +659,10 @@ const RivalGame = (() => {
         p.cleaning = { table: s.index, left: 2.5 };
         return;
       }
-      if (s.type === "assistant" && t.assistant) {
+      if (s.type === "assistant" && t.cooks.length >= 4) {
         this.say(
           p,
-          "Cook: " +
-            t.assistant.state +
-            ". Collect baked food at Pickup or Oven.",
+          "All four cooks hired. Collect baked food at Pickup or Oven.",
         );
         return;
       }
@@ -722,8 +733,11 @@ const RivalGame = (() => {
         if (["banana", "flour", "bottle"].includes(key))
           p.hand = { kind: key, owner: p.id };
         if (key === "assistant") {
-          t.assistant = {
-            ...s.approach,
+          t.cooks.push({
+            ...t.stations.find((s) => s.type === "topping").workPoints[
+              t.cooks.length
+            ],
+            index: t.cooks.length,
             job: null,
             food: null,
             path: [],
@@ -731,7 +745,7 @@ const RivalGame = (() => {
             faceX: p.id ? -1 : 1,
             faceY: 0,
             walk: 0,
-          };
+          });
           this.record("hire", { id: p.id, kind: key });
         }
         if (
@@ -817,39 +831,50 @@ const RivalGame = (() => {
         p.cursor = 0;
       }
       if (s.type === "oven") {
-        if (t.oven) {
-          if (t.oven.stage === "burned") {
-            t.oven = null;
-          } else if (t.oven.stage === "ready" && !p.hand) {
-            p.hand = t.oven;
-            t.oven = null;
-            if (t.assistant?.job?.order === p.hand.order) this.releaseCook(t);
-            this.record("ovenCollect", { id: p.id, order: p.hand.order });
-          } else this.say(p, "Oven busy or hands full");
-        } else if (p.hand?.stage === "raw") {
-          t.oven = { ...p.hand, stage: "baking", timer: 3 };
+        const slot = s.slot ?? 0,
+          food = t.ovens[slot];
+        if (food?.stage === "burned") {
+          t.ovens[slot] = null;
+          for (const cook of t.cooks)
+            if (cook.job?.order === food.order) this.releaseCook(t, cook);
+        } else if (food?.stage === "ready" && !p.hand) {
+          p.hand = food;
+          t.ovens[slot] = null;
+          for (const cook of t.cooks)
+            if (cook.job?.order === food.order) this.releaseCook(t, cook);
+          this.record("ovenCollect", { id: p.id, order: food.order, slot });
+        } else if (!food && p.hand?.stage === "raw") {
+          t.ovens[slot] = { ...p.hand, stage: "baking", timer: 3 };
           p.hand = null;
-        } else this.say(p, "Oven needs an assembled raw pizza");
+        } else
+          this.say(
+            p,
+            "Oven slot " +
+              (slot + 1) +
+              (food ? " busy or hands full" : " needs a raw pizza"),
+          );
       }
       if (s.type === "serving") {
-        if (!p.hand && t.pickup) {
-          p.hand = t.pickup;
-          t.pickup = null;
+        if (!p.hand && t.pickup.length) {
+          const index = Math.max(
+            0,
+            t.pickup.findIndex((f) => f.order === p.selected),
+          );
+          p.hand = t.pickup.splice(index, 1)[0];
           this.record("pickupCollect", { id: p.id, order: p.hand.order });
           return;
         }
         if (
-          t.pickup ||
           p.hand?.stage !== "ready" ||
           this.order(p.hand.order)?.team !== p.id
         ) {
           this.say(
             p,
-            "Pickup holds one baked regular pizza. Empty hands collect it.",
+            "Queue baked regular pizzas here. Empty hands collect selected order, or oldest dish.",
           );
           return;
         }
-        t.pickup = p.hand;
+        t.pickup.push(p.hand);
         p.hand = null;
       }
     }
@@ -886,27 +911,12 @@ const RivalGame = (() => {
         v.cleaning = null;
       }
       v.panel = null;
-      v.attack = null;
       v.stun = 0.45;
       v.immune = 2.5;
       const d = Math.hypot(dx, dy) || 1;
       v.knockX = (dx / d) * 200;
       v.knockY = (dy / d) * 200;
       this.record("hit", { id: v.id });
-      this.sounds.push("punch");
-    }
-    punch(p) {
-      if (
-        !this.active() ||
-        p.stun ||
-        p.punchCD ||
-        p.prep ||
-        p.panel ||
-        this.winner !== null
-      )
-        return;
-      p.punchCD = 1.2;
-      p.attack = { age: 0, x: p.faceX, y: p.faceY, hit: false };
     }
     trap(p) {
       if (
@@ -927,12 +937,6 @@ const RivalGame = (() => {
       p.hand = null;
       p.trapCD = 1;
       this.record("trap", { id: p.id });
-    }
-    dash(p) {
-      if (!this.active() || p.stun || p.prep || p.panel || p.dashCD) return;
-      p.dashCD = 5;
-      p.dashTime = 0.2;
-      this.sounds.push("dash");
     }
     invade(id) {
       if (this.rats.some((r) => r.team === id)) return false;
@@ -963,9 +967,9 @@ const RivalGame = (() => {
           .filter((c) => c.state === "waiting" && !c.departing)
           .sort((a, b) => a.patience - b.patience)[0];
         if (
-          t.pickup &&
+          t.pickup.length &&
           (!c ||
-            this.order(t.pickup.order)?.patience <= c.patience ||
+            this.order(t.pickup[0].order)?.patience <= c.patience ||
             w.lastTask === "accept")
         ) {
           w.task = "pickup";
@@ -993,12 +997,11 @@ const RivalGame = (() => {
       w.service = 0;
       if (w.task === "pickup") {
         if (
-          t.pickup &&
-          t.pickup.stage === "ready" &&
-          this.order(t.pickup.order)?.team === t.id
+          t.pickup.length &&
+          t.pickup[0].stage === "ready" &&
+          this.order(t.pickup[0].order)?.team === t.id
         ) {
-          w.pizza = t.pickup;
-          t.pickup = null;
+          w.pizza = t.pickup.shift();
           const c = this.order(w.pizza.order);
           w.target = c.id;
           w.task = "deliver";
@@ -1050,9 +1053,9 @@ const RivalGame = (() => {
       this.nextVIP = this.time + 60;
       return true;
     }
-    releaseCook(t) {
-      const a = t.assistant;
+    releaseCook(t, a) {
       if (!a) return;
+      a.slot = null;
       a.job = null;
       a.food = null;
       a.phase = "return";
@@ -1077,13 +1080,14 @@ const RivalGame = (() => {
       }
       return distance(a, target) < 22;
     }
-    assistantStep(t, dt) {
-      const a = t.assistant;
+    assistantStep(t, a, dt) {
       if (!a) return;
-      const bench = t.stations.find((s) => s.type === "assistant").approach;
-      const oven = t.stations.find((s) => s.type === "oven").approach;
+      const bench = t.stations.find((s) => s.type === "topping").workPoints[
+        a.index
+      ];
+      const oven = t.stations.find((s) => s.type === "oven");
       const pickup = t.stations.find((s) => s.type === "serving").approach;
-      if (a.job && !this.order(a.job.order)) this.releaseCook(t);
+      if (a.job && !this.order(a.job.order)) this.releaseCook(t, a);
       if (!a.job) {
         if (!this.cookWalk(a, bench, "Returning to bench", dt)) return;
         const orders = t.customers
@@ -1127,73 +1131,97 @@ const RivalGame = (() => {
         return;
       }
       if (a.phase === "oven") {
-        if (t.oven) {
-          this.cookWalk(
-            a,
-            { x: oven.x, y: oven.y + 80 },
-            "Waiting for oven",
-            dt,
+        // Reserve an empty slot while walking, so concurrent cooks choose distinct bays.
+        if (
+          a.slot == null ||
+          t.ovens[a.slot] ||
+          t.cooks.some(
+            (c) => c !== a && c.phase === "oven" && c.slot === a.slot,
+          )
+        )
+          a.slot = t.ovens.findIndex(
+            (food, i) =>
+              !food &&
+              !t.cooks.some(
+                (c) => c !== a && c.phase === "oven" && c.slot === i,
+              ),
           );
+        if (a.slot < 0) {
+          a.slot = null;
+          this.cookWalk(a, bench, "Waiting for oven", dt);
           return;
         }
-        if (!this.cookWalk(a, oven, "Walking to oven", dt)) return;
-        t.oven = a.food;
+        if (
+          !this.cookWalk(
+            a,
+            oven.slots[a.slot].approach,
+            "Carrying raw pizza to oven",
+            dt,
+          )
+        )
+          return;
+        t.ovens[a.slot] = a.food;
         a.food = null;
-        t.oven.stage = "baking";
-        t.oven.timer = 3;
+        t.ovens[a.slot].stage = "baking";
+        t.ovens[a.slot].timer = 3;
         a.phase = "bake";
         a.collectionLeft = 0.6;
         a.state = "Baking";
-        this.record("cookLoaded", { id: t.id, order: a.job.order });
+        this.record("cookLoaded", {
+          id: t.id,
+          order: a.job.order,
+          slot: a.slot,
+        });
         return;
       }
       if (a.phase === "bake") {
-        if (t.oven?.order !== a.job.order) {
-          this.releaseCook(t);
+        const food = t.ovens[a.slot];
+        if (food?.order !== a.job.order) {
+          this.releaseCook(t, a);
           return;
         }
-        if (t.oven.stage === "burned") {
-          t.oven = null;
+        if (food.stage === "burned") {
+          t.ovens[a.slot] = null;
           this.alert(
             t,
             "Cook discarded burned food; order can be prepared again",
           );
-          this.releaseCook(t);
+          this.releaseCook(t, a);
           return;
         }
         a.state = "Baking";
-        if (t.oven.stage !== "ready") return;
-        a.state = "Collecting baked pizza";
+        if (food.stage !== "ready") return;
         a.collectionLeft -= dt;
-        if (a.collectionLeft > 0) return;
-        if (!this.cookWalk(a, oven, "Collecting baked pizza", dt)) return;
-        a.food = t.oven;
-        t.oven = null;
+        if (
+          a.collectionLeft > 0 ||
+          !this.cookWalk(
+            a,
+            oven.slots[a.slot].approach,
+            "Collecting baked pizza",
+            dt,
+          )
+        )
+          return;
+        a.food = food;
+        t.ovens[a.slot] = null;
+        a.slot = null;
         a.phase = "pickup";
         a.destination = null;
         return;
       }
       if (a.phase === "pickup") {
-        if (t.pickup) {
-          this.cookWalk(
-            a,
-            { x: pickup.x + (t.id ? -80 : 80), y: pickup.y },
-            "Waiting for pickup space",
-            dt,
-          );
-          return;
-        }
         if (!this.cookWalk(a, pickup, "Carrying baked pizza to pickup", dt))
           return;
         if (a.food?.stage !== "ready") {
-          this.releaseCook(t);
+          this.releaseCook(t, a);
           return;
         }
-        t.pickup = a.food;
+        t.pickup.push(a.food);
         this.record("cookPickup", { id: t.id, order: a.job.order });
-        this.releaseCook(t);
+        this.releaseCook(t, a);
       }
     }
+
     makeStains(table) {
       const stains = [];
       for (let group = 0; group < 4; group++) {
@@ -1252,7 +1280,10 @@ const RivalGame = (() => {
               (s.x - p.x) * p.faceX + (s.y - p.y) * p.faceY > 0 &&
               !t.customers.some((c) => t.seats[c.seat].table === s.index),
           )
-          .sort((a, b) => distance(p, a) - distance(p, b))[0];
+          .sort(
+            (a, b) =>
+              distance(p, a.approach || a) - distance(p, b.approach || b),
+          )[0];
         if (!table || t.tables.some((s) => s.dirty)) {
           this.say(
             p,
@@ -1322,10 +1353,10 @@ const RivalGame = (() => {
       const dishes = [
         p.hand,
         p.prep,
-        t.oven,
-        t.pickup,
+        ...t.ovens,
+        ...t.pickup,
         t.waiter?.pizza,
-        t.assistant?.food,
+        ...t.cooks.map((a) => a.food),
         ...this.drops.filter((d) => d.owner === t.id).map((d) => d.item),
       ];
       for (const dish of dishes) {
@@ -1376,7 +1407,7 @@ const RivalGame = (() => {
           ...this.players.filter((p) => !p.hidden),
           ...t.customers,
           t.waiter,
-          t.assistant,
+          ...t.cooks,
         ]
           .filter(Boolean)
           .some((a) => distance(a, t.door) < 130);
@@ -1434,17 +1465,17 @@ const RivalGame = (() => {
           this.mode !== "tutorial"
         )
           this.addCustomer(t);
-        if (t.oven) {
-          t.oven.timer -= dt;
-          if (t.oven.stage === "baking" && t.oven.timer <= 0) {
-            t.oven.stage = "ready";
-            t.oven.timer = 12;
+        for (const food of t.ovens.filter(Boolean)) {
+          food.timer -= dt;
+          if (food.stage === "baking" && food.timer <= 0) {
+            food.stage = "ready";
+            food.timer = 12;
             this.sounds.push("ready");
-          } else if (t.oven.stage === "ready" && t.oven.timer <= 0)
-            t.oven.stage = "burned";
+          } else if (food.stage === "ready" && food.timer <= 0)
+            food.stage = "burned";
         }
         this.waiterStep(t, dt);
-        this.assistantStep(t, dt);
+        for (const a of t.cooks) this.assistantStep(t, a, dt);
         if (this.winner !== null) return;
       }
       for (const v of [...this.vips]) {
@@ -1465,9 +1496,6 @@ const RivalGame = (() => {
         for (const k of [
           "stun",
           "immune",
-          "punchCD",
-          "dashCD",
-          "dashTime",
           "trapCD",
           "messageTime",
           "flourTime",
@@ -1481,22 +1509,6 @@ const RivalGame = (() => {
             p.hand = p.prep;
             p.prep = null;
           }
-        }
-        if (p.attack) {
-          const a = p.attack;
-          a.age += dt;
-          if (a.age >= 0.12 && a.age <= 0.26 && !a.hit) {
-            const v = this.players[1 - p.id],
-              dx = v.x - p.x,
-              dy = v.y - p.y,
-              forward = dx * a.x + dy * a.y,
-              side = Math.abs(dx * a.y - dy * a.x);
-            if (forward > 14 && forward < 62 && side < 20) {
-              this.hit(v, dx, dy);
-              a.hit = true;
-            }
-          }
-          if (a.age > 0.34) p.attack = null;
         }
         if (p.stun) {
           this.move(p, p.knockX * dt, p.knockY * dt);
@@ -1525,18 +1537,14 @@ const RivalGame = (() => {
           }
           continue;
         }
-        if (p.panel || p.prep || p.attack || p.signBusy) continue;
+        if (p.panel || p.prep || p.signBusy) continue;
         const input = inputs[p.id] || {},
           d = Math.hypot(input.x || 0, input.y || 0);
         if (d) {
           p.faceX = input.x / d;
           p.faceY = input.y / d;
           p.walk += dt * 20;
-          this.move(
-            p,
-            p.faceX * (p.dashTime ? 570 : 235) * dt,
-            p.faceY * (p.dashTime ? 570 : 235) * dt,
-          );
+          this.move(p, p.faceX * 235 * dt, p.faceY * 235 * dt);
         }
       }
       for (const trap of this.traps) {

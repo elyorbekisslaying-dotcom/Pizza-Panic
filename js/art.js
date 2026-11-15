@@ -341,6 +341,27 @@ const GameIcons = (() => {
     c.translate(x, y);
     c.scale(scale, scale);
     switch (key) {
+      case "recipe0":
+      case "recipe1":
+      case "recipe2":
+        PizzaArt.pizza(
+          c,
+          0,
+          0,
+          Object.fromEntries(
+            [
+              "sauce",
+              "cheese",
+              ...(key === "recipe1"
+                ? ["pepperoni"]
+                : key === "recipe2"
+                  ? ["vegetables"]
+                  : []),
+            ].map((k) => [k, true]),
+          ),
+          0.7,
+        );
+        break;
       case "flour":
         poly(
           c,
@@ -428,20 +449,6 @@ const GameIcons = (() => {
       case "pin":
         box(c, -22, -3, 44, 6, 3, "#a96840", ink);
         box(c, -13, -7, 26, 14, 5, "#e5b67c", ink);
-        break;
-      case "dash":
-        poly(
-          c,
-          [
-            [3, -18],
-            [-14, 3],
-            [-2, 3],
-            [-8, 18],
-            [16, -5],
-            [3, -5],
-          ],
-          "#ffe28a",
-        );
         break;
       case "star": {
         const pts = [];

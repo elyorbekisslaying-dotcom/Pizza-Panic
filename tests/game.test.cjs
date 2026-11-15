@@ -200,7 +200,7 @@ test("waiter takes orders by walking and accepts only explicitly transferred bak
   at(g, 0, "serving");
   const cash = t.money;
   g.interact(p);
-  assert(!t.pickup);
+  assert(!t.pickup[0]);
   assert.equal(p.hand.stage, "dough");
   at(g, 0, "topping");
   g.interact(p);
@@ -208,7 +208,7 @@ test("waiter takes orders by walking and accepts only explicitly transferred bak
   g.assemble(p);
   at(g, 0, "serving");
   g.interact(p);
-  assert(!t.pickup);
+  assert(!t.pickup[0]);
   assert.equal(t.money, cash);
   at(g, 0, "oven");
   g.interact(p);
@@ -216,7 +216,7 @@ test("waiter takes orders by walking and accepts only explicitly transferred bak
   g.interact(p);
   at(g, 0, "serving");
   g.interact(p);
-  assert(t.pickup);
+  assert(t.pickup[0]);
   assert(!p.hand);
   assert.equal(t.money, cash);
   let elapsed = 0;
@@ -250,7 +250,7 @@ test("expired waiter task clears without reward or hanging", () => {
   tick(g, 0.2);
   assert.equal(t.rep, 0);
   assert.equal(t.money, cash);
-  assert(!t.pickup);
+  assert(!t.pickup[0]);
   assert(!t.waiter.pizza);
   assert.notEqual(t.waiter.target, o.id);
 });
@@ -296,14 +296,14 @@ test("oven burns and cancelled food clears every holder", () => {
   greet(h, 0);
   cook(h, 0);
   const t = h.teams[0];
-  t.oven = h.players[0].hand;
+  t.ovens[0] = h.players[0].hand;
   h.players[0].hand = null;
   tick(h, 13);
-  assert.equal(t.oven.stage, "burned");
-  assert(!h.deliver(t.oven, t));
+  assert.equal(t.ovens[0].stage, "burned");
+  assert(!h.deliver(t.ovens[0], t));
   at(h, 0, "oven");
   h.interact(h.players[0]);
-  assert(!t.oven);
+  assert(!t.ovens[0]);
 });
 test("bananas occupy hands, purchase respects food, warning and owner immunity", () => {
   const g = setup(),
@@ -341,50 +341,13 @@ test("bananas occupy hands, purchase respects food, warning and owner immunity",
   assert(p.hand);
   assert.equal(g.traps.length, 0);
 });
-test("rolling pin hits only short forward sector during active frames; no repeated hit", () => {
-  for (const [x, y] of [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-    [Math.SQRT1_2, Math.SQRT1_2],
-  ]) {
-    const g = setup(),
-      p = g.players[0],
-      r = g.players[1];
-    p.x = 1000;
-    p.y = 900;
-    p.faceX = x;
-    p.faceY = y;
-    r.x = p.x + x * 52;
-    r.y = p.y + y * 52;
-    g.punch(p);
-    assert.equal(r.immune, 0);
-    tick(g, 0.1);
-    assert.equal(r.immune, 0);
-    tick(g, 0.05);
-    assert(r.immune > 0);
-    const immune = r.immune;
-    tick(g, 0.1);
-    assert(r.immune < immune);
-  }
-  for (const offset of [
-    [-40, 0],
-    [80, 0],
-    [30, 35],
-  ]) {
-    const g = setup(),
-      p = g.players[0],
-      r = g.players[1];
-    p.x = 1000;
-    p.y = 900;
-    p.faceX = 1;
-    p.faceY = 0;
-    r.x = p.x + offset[0];
-    r.y = p.y + offset[1];
-    g.punch(p);
-    tick(g, 0.3);
-    assert.equal(r.immune, 0);
+test("removed attack and dash controls have no bindings or methods", () => {
+  const g = setup();
+  assert.equal(g.punch, undefined);
+  assert.equal(g.dash, undefined);
+  for (const c of K.controls) {
+    assert.equal(c.punch, undefined);
+    assert.equal(c.dash, undefined);
   }
 });
 test("rats navigate from burrow to storage and exit with at most four stolen units", () => {
@@ -473,14 +436,14 @@ test("VIP accepts both players personally, rejects waiter pickup and rewards one
   g.teams[1].waiter = { x: 340, y: 400, task: "idle", path: [] };
   at(g, 1, "serving");
   g.interact(g.players[1]);
-  assert(!g.teams[1].pickup);
+  assert(!g.teams[1].pickup[0]);
   assert(g.deliver(first, g.teams[0]));
   assert(!g.deliver(second, g.teams[1]));
   assert.equal(g.teams[0].rep, 12);
   assert.equal(g.teams[1].rep, 0);
   assert(!g.players[1].hand);
 });
-test("simultaneous movement, local panels and wall-safe dash", () => {
+test("simultaneous movement, local panels and wall-safe walking", () => {
   const g = setup(),
     p = g.players[0],
     r = g.players[1],
@@ -504,7 +467,7 @@ test("simultaneous movement, local panels and wall-safe dash", () => {
   p.y = 220;
   p.faceX = 0;
   p.faceY = -1;
-  g.dash(p);
+
   tick(g, 0.3, [{ x: 0, y: -1 }, {}]);
   assert(!g.solid(p.x, p.y));
 });

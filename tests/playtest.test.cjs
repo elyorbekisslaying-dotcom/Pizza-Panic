@@ -19,7 +19,7 @@ function until(g, check, max = 60) {
   for (let i = 0; i < max * 60 && !check(); i++) g.step(1 / 60);
   assert(
     check(),
-    "transition timed out: " + g.teams.map((t) => t.assistant?.state).join("/"),
+    "transition timed out: " + g.teams.map((t) => t.cooks[0]?.state).join("/"),
   );
 }
 function setup(id = 0) {
@@ -83,7 +83,14 @@ for (const id of [0, 1]) {
     }
     for (const y of [150, 250, 350, 450, 750, 850, 950, 1050])
       assert(!g.solid(1000, y), "central lane");
-    assert(!g.solid(K.mirror(id, 370), 270), "freed kitchen center");
+    assert(g.solid(K.mirror(id, 430), 295), "central shared oven collision");
+    for (const point of t.stations.find((s) => s.type === "oven").slots) {
+      assert(
+        !g.solid(point.approach.x, point.approach.y),
+        "free oven approach",
+      );
+      assert(g.path(t.entrance, point.approach).length, "route around oven");
+    }
     const c = t.customers[0];
     const path = g.path(t.entrance, t.seats[c.seat].approach);
     assert(
@@ -109,7 +116,7 @@ for (const id of [0, 1]) {
     t.money = 1000;
     visit(g, id, "assistant");
     visit(g, id, "waiter");
-    const a = t.assistant;
+    const a = t.cooks[0];
     const start = { x: a.x, y: a.y },
       cash = t.money;
     let moved = false,
@@ -126,7 +133,7 @@ for (const id of [0, 1]) {
     const paid = t.money;
     tick(g, 10);
     assert.equal(t.money, paid);
-    assert(!t.oven && !t.pickup && !a.food && !a.job);
+    assert(!t.ovens.some(Boolean) && !t.pickup.length && !a.food && !a.job);
     const w = t.waiter;
     w.path = [{ x: w.x + 300, y: w.y }];
     const x = w.x;
@@ -134,78 +141,50 @@ for (const id of [0, 1]) {
     assert.equal(w.x - x, 115);
     assert(115 / 235 < 0.5);
   });
-  test(`team ${id}: occupied oven and pickup preserve exact objects; manual collection releases cook`, () => {
+  test(`team ${id}: queued pickup preserves objects; manual oven collection releases cook`, () => {
     const { g, t, o, p } = setup(id);
-    add(g, t);
-    const other = t.customers.at(-1);
-    other.state = "waiting";
-    g.accept(other, id);
-    other.patience = 1000;
-    const blocker = food(other, id);
-    blocker.stage = "baking";
-    blocker.timer = 3;
-    t.oven = blocker;
-    until(g, () => t.assistant.state === "Waiting for oven", 15);
-    const dough = t.stock.dough;
-    tick(g, 2);
-    assert.equal(t.oven, blocker);
-    assert.equal(t.assistant.food.order, o.id);
-    assert(
-      !g.status(o, id).startsWith("Ready"),
-      "another order in the oven must not mark raw cook food ready",
-    );
-    assert(!g.solid(t.assistant.x, t.assistant.y));
-    t.oven = null;
-    t.pickup = blocker;
-    blocker.stage = "ready";
-    until(g, () => t.assistant.state === "Waiting for pickup space", 15);
-    const ready = t.assistant.food;
-    assert.equal(ready.stage, "ready");
-    tick(g, 3);
-    assert.equal(t.pickup, blocker);
-    assert.equal(t.assistant.food, ready);
-    assert.equal(t.stock.dough, dough);
-    visit(g, id, "serving");
-    assert.equal(p.hand, blocker);
-    greet(g, id, other);
-    assert.equal(t.rep, 10);
-    until(g, () => t.pickup === ready, 10);
+    until(g, () => t.pickup.length === 1, 40);
+    const ready = t.pickup[0];
+    assert.equal(ready.order, o.id);
     visit(g, id, "serving");
     assert.equal(p.hand, ready);
     greet(g, id, o);
-    assert.equal(t.rep, 20);
-    assert(!t.assistant.job);
+    assert.equal(t.rep, 10);
     const next = setup(id);
-    until(next.g, () => next.t.oven?.stage === "ready", 20);
-    const baked = next.t.oven;
-    visit(next.g, id, "oven");
+    until(next.g, () => next.t.ovens.some((f) => f?.stage === "ready"), 20);
+    const slot = next.t.ovens.findIndex((f) => f?.stage === "ready");
+    const baked = next.t.ovens[slot];
+    const point = next.t.stations.find((s) => s.type === "oven").slots[slot]
+      .approach;
+    Object.assign(next.p, point);
+    next.g.interact(next.p);
     assert.equal(next.p.hand, baked);
-    assert(!next.t.assistant.job && !next.t.oven);
+    assert(!next.t.cooks[0].job && !next.t.ovens[slot]);
     tick(next.g, 3);
     assert.equal(next.p.hand, baked);
-    assert(!next.t.pickup);
+    assert.equal(next.t.pickup.length, 0);
     assert.equal(next.t.rep, 0);
   });
   test(`team ${id}: cancellation at all cook phases and burned food clear reservations`, () => {
     for (const phase of ["prep", "oven", "bake", "pickup"]) {
       const { g, t, o } = setup(id);
-      until(g, () => t.assistant.phase === phase, 30);
+      until(g, () => t.cooks[0].phase === phase, 30);
       const stock = JSON.stringify(t.stock),
         cash = t.money;
       o.patience = 0.001;
       tick(g, 0.02);
       assert(!g.order(o.id));
       assert(!g.pizzaExists(o.id, id));
-      assert(!t.assistant.job && !t.assistant.food);
-      assert(!t.oven && !t.pickup);
+      assert(!t.cooks[0].job && !t.cooks[0].food);
+      assert(!t.ovens.some(Boolean) && !t.pickup[0]);
       assert.equal(t.money, cash);
       assert.equal(JSON.stringify(t.stock), stock);
     }
     const { g, t } = setup(id);
-    until(g, () => t.assistant.phase === "bake", 20);
-    t.oven.stage = "burned";
-    g.assistantStep(t, 0.01);
-    assert(!t.oven && !t.assistant.job && !t.assistant.food);
+    until(g, () => t.cooks[0].phase === "bake", 20);
+    t.ovens[0].stage = "burned";
+    g.assistantStep(t, t.cooks[0], 0.01);
+    assert(!t.ovens.some(Boolean) && !t.cooks[0].job && !t.cooks[0].food);
     assert.equal(t.rep, 0);
   });
   test(`team ${id}: auto-select urgency, manual/VIP priority, reservation race`, () => {
@@ -236,7 +215,7 @@ for (const id of [0, 1]) {
     assert.equal(p.prep.order, g.vip.id);
     g.cancel(g.vip.id);
     const z = setup(id);
-    z.g.assistantStep(z.t, 0.01);
+    z.g.assistantStep(z.t, z.t.cooks[0], 0.01);
     visit(z.g, id, "dough");
     assert(!z.p.prep);
     assert.match(z.p.message, /Cook/);
@@ -367,10 +346,10 @@ test("reset clears cook/waiter/effects/paths/claims and rebuilds navigation", ()
   assert(
     g.teams.every(
       (t) =>
-        !t.assistant &&
+        !t.cooks.length &&
         !t.waiter &&
-        !t.oven &&
-        !t.pickup &&
+        !t.ovens.some(Boolean) &&
+        !t.pickup.length &&
         t.tables.every((x) => !x.stains && !x.dirty),
     ),
   );

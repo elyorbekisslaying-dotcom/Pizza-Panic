@@ -21,6 +21,22 @@
           ><span id="event" role="status"></span
           ><button id="pause">Pause · Esc</button>
         </nav>
+        <section id="instructor" hidden>
+          <canvas id="mentor" width="90" height="100"></canvas>
+          <div>
+            <b id="lesson-title"></b>
+            <p id="lesson-text"></p>
+          </div>
+          <button
+            id="collapse-instructor"
+            aria-expanded="true"
+            aria-controls="lesson-text"
+          >
+            Collapse
+          </button>
+          <button id="recover">Restart lesson</button
+          ><button id="leave-tutorial">Menu</button>
+        </section>
         <div id="players"></div>
       </div>
       <section id="overlay" class="overlay">
@@ -35,15 +51,6 @@
         </div>
       </section>
       <div id="countdown" hidden></div>
-      <section id="instructor" hidden>
-        <canvas id="mentor" width="90" height="100"></canvas>
-        <div>
-          <b id="lesson-title"></b>
-          <p id="lesson-text"></p>
-        </div>
-        <button id="recover">Restart lesson</button
-        ><button id="leave-tutorial">Menu</button>
-      </section>
       <div id="drag-ghost" hidden></div>
     </main>
   </body>

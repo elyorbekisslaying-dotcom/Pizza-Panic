@@ -43,7 +43,7 @@ function run(policy, seed) {
       visit("waiter");
       firstHire ??= g.time;
     }
-    if (policy === "assistant-safe" && !t.assistant && t.money >= 180) {
+    if (policy === "assistant-safe" && !t.cooks.length && t.money >= 180) {
       visit("supply");
       for (const k of K.recipes[0].items)
         if (t.stock[k] === 0 && g.buy(p, k)) ingredientsBought += K.prices[k];
@@ -51,15 +51,15 @@ function run(policy, seed) {
     }
     if (
       (policy === "assistant" || policy === "assistant-safe") &&
-      !t.assistant &&
+      !t.cooks.length &&
       t.money >= 180
     ) {
       visit("assistant");
       firstHire ??= g.time;
     }
     let o;
-    if (t.assistant) {
-      if (!t.pickup) {
+    if (t.cooks[0]) {
+      if (!t.pickup[0]) {
         tick(g, 0.25);
         const available = t.customers.find(
           (c) => c.state === "accepted" && !c.departing,
@@ -68,7 +68,7 @@ function run(policy, seed) {
           o = t.customers.find((c) => c.state === "waiting");
           if (o && walk(t.seats[o.seat].approach)) g.interact(p);
         }
-        if (t.assistant.state === "Missing ingredients") {
+        if (t.cooks[0].state === "Missing ingredients") {
           visit("supply");
           for (const k of K.stockKeys)
             if (t.stock[k] === 0 && g.buy(p, k))
@@ -77,7 +77,7 @@ function run(policy, seed) {
         }
         continue;
       }
-      o = g.order(t.pickup.order);
+      o = g.order(t.pickup[0].order);
       visit("serving");
     } else {
       o = t.customers

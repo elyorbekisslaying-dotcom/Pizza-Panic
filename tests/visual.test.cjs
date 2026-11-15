@@ -308,7 +308,7 @@ fs.mkdirSync(out, { recursive: true });
     await page.evaluate(
       () =>
         rivalTest.game.players.every((p) => !p.flourTime) &&
-        rivalTest.game.teams.every((t) => !t.assistant && !t.waiter),
+        rivalTest.game.teams.every((t) => !t.cooks.length && !t.waiter),
     ),
   );
   const helpers = fs.readFileSync(path.join(__dirname, "helpers.cjs"), "utf8");

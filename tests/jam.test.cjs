@@ -24,8 +24,7 @@ test("countdown freezes all world state and rejects every action before GO", () 
     players: g.players,
   });
   g.interact(p);
-  g.punch(p);
-  g.dash(p);
+
   p.panel = "supply";
   assert(!g.buy(p, "cheese"));
   p.panel = null;
@@ -90,21 +89,21 @@ test("assistant atomically claims one accepted order and never duplicates manual
     visit(g, 0, "assistant");
     const stock = t.stock.dough;
     if (assistantFirst) {
-      g.assistantStep(t, 0.01);
+      g.assistantStep(t, t.cooks[0], 0.01);
       visit(g, 0, "dough");
       assert(!g.players[0].prep);
-      assert(t.assistant.job);
+      assert(t.cooks[0].job);
     } else {
       visit(g, 0, "dough");
-      g.assistantStep(t, 0.01);
+      g.assistantStep(t, t.cooks[0], 0.01);
       assert(g.players[0].prep);
-      assert(!t.assistant.job);
+      assert(!t.cooks[0].job);
     }
     assert.equal(t.stock.dough, stock - 1);
     assert.equal(t.rep, 0);
     o.patience = 0.001;
     tick(g, 0.02);
-    assert(!t.assistant.job);
+    assert(!t.cooks[0].job);
     assert(!g.players[0].prep);
   }
 });
@@ -114,17 +113,17 @@ test("cook waits for accepted orders/ingredients and produces baked pickup witho
   t.money = 300;
   visit(g, 0, "assistant");
   tick(g, 8);
-  assert.equal(t.assistant.state, "Waiting for orders");
+  assert.equal(t.cooks[0].state, "Waiting for orders");
   const o = greet(g, 0);
   t.stock.cheese = 0;
   tick(g, 0.1);
-  assert.equal(t.assistant.state, "Missing ingredients");
+  assert.equal(t.cooks[0].state, "Missing ingredients");
   t.stock.cheese = 1;
   tick(g, 0.1);
-  assert(t.assistant.job);
+  assert(t.cooks[0].job);
   const cash = t.money;
   tick(g, 22);
-  assert.equal(t.pickup.stage, "ready");
+  assert.equal(t.pickup[0].stage, "ready");
   assert.equal(t.money, cash);
   const dough = t.stock.dough;
   tick(g, 5);
@@ -133,7 +132,7 @@ test("cook waits for accepted orders/ingredients and produces baked pickup witho
   assert.equal(g.players[0].hand.stage, "ready");
   g.spawnVIP(1);
   g.vips[0].accepted.push(0);
-  assert(!t.assistant.job);
+  assert(!t.cooks[0].job);
 });
 test("waiter finishes committed task, pauses at recipient and never rewards during travel", () => {
   const g = fresh(),
@@ -150,7 +149,7 @@ test("waiter finishes committed task, pauses at recipient and never rewards duri
   cook(g, 0);
   visit(g, 0, "serving");
   const cash = t.money;
-  assert(t.pickup || t.waiter.pizza);
+  assert(t.pickup[0] || t.waiter.pizza);
   if (t.waiter.task === "accept") assert.equal(t.waiter.target, target);
   let sawPause = false;
   for (let i = 0; i < 3000 && t.rep === 0; i++) {

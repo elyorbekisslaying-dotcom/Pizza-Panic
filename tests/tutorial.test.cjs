@@ -178,10 +178,10 @@ assert.equal(g.teams[0].rep, 42);
 const h = new Game(),
   t = new Tutorial(h, () => {});
 t.index = 10;
-h.teams[0].oven = { stage: "burned" };
+h.teams[0].ovens[0] = { stage: "burned" };
 t.recover();
 assert.equal(t.step.key, "greet");
-assert(!h.teams[0].oven);
+assert(!h.teams[0].ovens[0]);
 assert(!t.done);
 t.index = t.steps.findIndex((s) => s.key === "clean");
 t.recover();
@@ -190,3 +190,49 @@ assert(!h.teams[0].tables.some((x) => x.dirty));
 console.log(
   "PASS complete tutorial through actual movement, cooking, staff, gadgets, cleanup, theft recovery and VIP; recovery after burned food and cleanup.",
 );
+
+// A learner may use any bay, not just the suggested first bay.
+{
+  const {
+    fresh,
+    Tutorial,
+    visit,
+    tick: advance,
+    walk,
+  } = require("./helpers.cjs");
+  const g = fresh();
+  const tutorial = new Tutorial(g, () => {}),
+    t = g.teams[0],
+    p = g.players[0];
+  advance(g, 12);
+  const order = t.customers[0];
+  g.accept(order, 0);
+  p.selected = order.id;
+  t.stock.cheese = 8;
+  visit(g, 0, "dough");
+  advance(g, 1.3);
+  visit(g, 0, "topping");
+  for (const ingredient of K.recipes[order.recipe].items.filter(
+    (k) => k !== "dough",
+  ))
+    assert(g.addIngredient(p, ingredient));
+  assert(g.assemble(p));
+  const oven = t.stations.find((s) => s.type === "oven");
+  Object.assign(p, oven.slots[3].approach);
+  g.interact(p);
+  assert(t.ovens[3]);
+  tutorial.index = tutorial.steps.findIndex((s) => s.key === "collect");
+  tutorial.startStep();
+  Object.assign(p, { x: 600, y: 580 });
+  tutorial.updateGuide();
+  assert.equal(tutorial.target.approach.x, oven.slots[3].approach.x);
+  assert.equal(tutorial.target.approach.y, oven.slots[3].approach.y);
+  walk(g, 0, oven.slots[3].approach);
+  advance(g, 3.1);
+  g.interact(p);
+  assert.equal(p.hand?.stage, "ready");
+  assert(!t.ovens[3]);
+  console.log(
+    "PASS tutorial follows the occupied alternate oven bay for collection",
+  );
+}

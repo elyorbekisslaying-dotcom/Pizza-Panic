@@ -21,9 +21,7 @@ const Kitchen = (() => {
       left: "KeyA",
       right: "KeyD",
       interact: "KeyE",
-      punch: "KeyF",
       trap: "KeyQ",
-      dash: "ShiftLeft",
       panel: "KeyI",
     },
     {
@@ -32,9 +30,7 @@ const Kitchen = (() => {
       left: "ArrowLeft",
       right: "ArrowRight",
       interact: "Enter",
-      punch: "Slash",
       trap: "Period",
-      dash: "ShiftRight",
       panel: "KeyO",
     },
   ];
@@ -42,8 +38,8 @@ const Kitchen = (() => {
   const stations = (id) => {
     const edge = [
       ["dough", 190, 100, 190, 170],
-      ["topping", 370, 100, 370, 170],
-      ["oven", 550, 100, 550, 170],
+      ["topping", 480, 100, 480, 170],
+      ["oven", 430, 295, 382, 205],
       ["assistant", 730, 100, 730, 170],
       ["terminal", 70, 190, 150, 190],
       ["serving", 70, 330, 150, 330],
@@ -57,10 +53,22 @@ const Kitchen = (() => {
       team: id,
       x: mirror(id, x),
       y,
-      w: 76,
-      h: 60,
+      w: type === "topping" ? 380 : type === "oven" ? 180 : 76,
+      h: type === "oven" ? 120 : 60,
       approach: { x: mirror(id, ax), y: ay },
     }));
+    const oven = edge.find((s) => s.type === "oven");
+    oven.slots = [0, 1, 2, 3].map((i) => ({
+      x: mirror(id, 430 + (i % 2 ? 46 : -46)),
+      y: 295 + (i < 2 ? -30 : 30),
+      approach: {
+        x: mirror(id, 430 + (i % 2 ? 48 : -48)),
+        y: i < 2 ? 205 : 385,
+      },
+    }));
+    edge.find((s) => s.type === "topping").workPoints = [
+      330, 430, 530, 630,
+    ].map((x) => ({ x: mirror(id, x), y: 170 }));
     // A half-turn maps the upper Blue stalls onto the lower Red stalls.
     const gadgets = [
       ["banana", 900, 220],

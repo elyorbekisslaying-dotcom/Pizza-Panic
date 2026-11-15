@@ -173,22 +173,6 @@ progress {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ability {
-  width: 28px;
-  height: 30px;
-  position: relative;
-}
-.ability img {
-  width: 28px;
-}
-.ability i {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #312737b8;
-  pointer-events: none;
-}
 .view {
   position: relative;
   height: calc(100vh - 245px);
@@ -636,9 +620,9 @@ h1 {
   flex-shrink: 0;
 }
 .lesson-target {
-  outline: 4px solid #42d5d9 !important;
+  outline: 4px solid #ffda57 !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 7px #193e4866 !important;
+  box-shadow: 0 0 0 7px #a77a1744 !important;
 }
 @media (max-height: 800px) {
   .menu-card {
@@ -661,5 +645,335 @@ h1 {
   }
   #actions button {
     padding: 9px;
+  }
+}
+
+/* Compact game chrome: panels remain inside the available viewport. */
+#match {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+nav {
+  flex-shrink: 0;
+  height: 42px;
+  background: #252c39;
+}
+#players {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.player {
+  display: flex;
+  flex-direction: column;
+  background: #293342;
+  border-radius: 9px;
+}
+.hud,
+.tutorial .hud {
+  min-height: 0;
+  padding: 6px 10px;
+  background: #293342;
+  flex-shrink: 0;
+}
+.summary h2 {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+.rating {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 0 8px;
+}
+.stars {
+  grid-column: 1;
+  grid-row: 1;
+}
+.stars .icon {
+  width: 34px;
+  height: 34px;
+}
+.rating progress {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  height: 5px;
+}
+.rating small {
+  grid-column: 1;
+  grid-row: 3;
+  font-size: 10px;
+  text-align: center;
+}
+.open-badge {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  justify-self: end;
+}
+.inventory {
+  margin: 4px 0;
+}
+.inventory .icon {
+  width: 25px;
+  height: 25px;
+}
+.task-row {
+  gap: 5px;
+  min-height: 27px;
+}
+.task .icon {
+  width: 25px;
+  height: 25px;
+  margin-right: 4px;
+}
+.hand {
+  min-width: 90px;
+  font-size: 11px;
+}
+.view,
+.tutorial .view {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.controls {
+  flex-shrink: 0;
+  padding: 4px;
+  font-size: 10px;
+}
+.panel,
+.tutorial .panel {
+  inset: 7px;
+  width: auto;
+  max-width: none;
+  transform: none;
+  border-width: 2px;
+  border-radius: 9px;
+  background: #293342fa;
+  color: #f0e9dc;
+  box-shadow: 0 5px 15px #10172066;
+}
+.panel header,
+.tutorial .panel header {
+  padding: 6px 10px;
+  border-color: #485564;
+  flex-shrink: 0;
+}
+.panel h3 {
+  font-size: 16px;
+}
+.panel .hint {
+  background: #202936;
+  color: #ced9e3;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+.panel-content,
+.tutorial .panel-content {
+  min-height: 0;
+  padding: 6px 10px;
+  overscroll-behavior: contain;
+}
+.panel footer,
+.tutorial .panel footer {
+  padding: 6px;
+  border-top: 1px solid #485564;
+  background: #222c39;
+  flex-shrink: 0;
+}
+.panel button {
+  background: #435368;
+  color: #f6f0df;
+  border: 1px solid #6a7f91;
+}
+.panel button:hover {
+  background: #526b82;
+}
+.panel .shop-row,
+.panel .order-row {
+  background: #354355;
+  margin: 4px 0;
+  padding: 6px;
+}
+.panel .ready-order {
+  border: 1px solid #78bd9e;
+  background: #314f49;
+}
+.panel .pizza-drop {
+  background: #b79970;
+  width: 143px;
+  height: 110px;
+}
+.ingredient,
+.tutorial .ingredient {
+  min-width: 72px;
+  padding: 4px;
+  font-size: 12px;
+}
+.ingredients {
+  gap: 6px;
+}
+.recipe,
+.tutorial .recipe {
+  margin: 4px;
+}
+button:focus-visible,
+.selected {
+  outline: 3px solid #69adff;
+  outline-offset: 1px;
+}
+.lesson-target {
+  outline: 3px solid #ffda57 !important;
+  outline-offset: 1px;
+}
+#instructor {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  min-height: 0;
+  flex-shrink: 0;
+  padding: 5px 12px;
+  gap: 8px;
+  border: 0;
+  border-bottom: 2px solid #518b92;
+  background: #252f3c;
+}
+#instructor canvas {
+  width: 34px;
+  height: 40px;
+}
+#instructor p {
+  font-size: 12px;
+  line-height: 1.3;
+  margin: 3px 0;
+  max-height: 48px;
+  overflow: auto;
+}
+#instructor b {
+  font-size: 12px;
+  color: #b9e4df;
+}
+#instructor button {
+  padding: 4px 7px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+#instructor.collapsed #lesson-text,
+#instructor.collapsed canvas {
+  display: none;
+}
+.tutorial #players {
+  max-width: 1150px;
+}
+@media (max-height: 600px) {
+  nav {
+    height: 34px;
+    padding: 3px 10px;
+  }
+  .summary h2 {
+    font-size: 10px;
+  }
+  .coins {
+    font-size: 16px;
+  }
+  .rating {
+    grid-template-columns: 150px 1fr;
+  }
+  .stars .icon {
+    width: 30px;
+    height: 30px;
+  }
+  .inventory .icon {
+    width: 20px;
+    height: 20px;
+  }
+  .task-row .icon {
+    width: 22px;
+    height: 22px;
+  }
+  .hud,
+  .tutorial .hud {
+    padding: 3px 8px;
+  }
+  #instructor p {
+    font-size: 11px;
+    max-height: 42px;
+  }
+  .panel .pizza-drop,
+  .tutorial .pizza-drop {
+    width: 105px;
+    height: 80px;
+  }
+  .panel .icon {
+    width: 24px;
+    height: 24px;
+  }
+  .panel h3 {
+    font-size: 14px;
+  }
+}
+@media (max-width: 700px) {
+  nav small {
+    display: none;
+  }
+  #instructor {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  #instructor > div {
+    min-width: 65%;
+  }
+  #instructor canvas {
+    display: none;
+  }
+  .summary h2 {
+    font-size: 10px;
+  }
+  .hand {
+    min-width: 0;
+  }
+}
+
+@media (max-height: 650px) {
+  .assembly-panel .panel-content {
+    display: grid;
+    grid-template-columns: 115px 1fr;
+    align-content: start;
+    align-items: center;
+    gap: 4px 8px;
+  }
+  .assembly-panel h4.assembly-title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 12px;
+  }
+  .assembly-panel .pizza-drop,
+  .tutorial .assembly-panel .pizza-drop {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    width: 105px;
+    height: 80px;
+    max-width: 100%;
+  }
+  .assembly-panel .recipe {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+  }
+  .assembly-panel .ingredients {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .assembly-panel .ingredient {
+    min-width: 60px;
+    padding: 3px;
+    font-size: 11px;
+  }
+  .assembly-panel p.assembly-title {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    margin: 0;
   }
 }

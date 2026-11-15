@@ -204,7 +204,7 @@ fs.mkdirSync(out, { recursive: true });
           if (failOnce && !failed) {
             await tick(16);
             assert.equal(
-              await page.evaluate(() => rivalTest.game.teams[0].oven.stage),
+              await page.evaluate(() => rivalTest.game.teams[0].ovens[0].stage),
               "burned",
             );
             await page

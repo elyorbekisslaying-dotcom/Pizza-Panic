@@ -33,7 +33,17 @@ class KitchenTutorial {
     );
   }
   station(type) {
-    return this.game.teams[0].stations.find((s) => s.type === type);
+    const t = this.game.teams[0],
+      station = t.stations.find((s) => s.type === type);
+    if (type === "oven" && station) {
+      const selected = this.game.players[0].selected;
+      const slot = t.ovens.findIndex(
+        (food) => food && (!selected || food.order === selected),
+      );
+      if (slot >= 0)
+        return { ...station, approach: station.slots[slot].approach };
+    }
+    return station;
   }
   guest() {
     return this.game.teams[0].customers.find((c) => !c.departing);
@@ -55,7 +65,7 @@ class KitchenTutorial {
     if (
       !o ||
       !g.accepted(o, 0) ||
-      g.teams[0].oven ||
+      g.teams[0].ovens.some(Boolean) ||
       ["raw", "ready"].includes(food?.stage)
     )
       return null;
@@ -131,7 +141,7 @@ class KitchenTutorial {
         key: "dough",
         text: "Close the shop with I. Visit Dough and press E with free hands. One dough is consumed; preparation takes 1.2 seconds.",
         target: "dough",
-        test: () => hand("dough") || hand("raw") || !!t().oven,
+        test: () => hand("dough") || hand("raw") || !!t().ovens.some(Boolean),
       },
       {
         key: "ingredients",
@@ -140,24 +150,25 @@ class KitchenTutorial {
         test: () =>
           (hand("dough") && p().hand.added.length === 2) ||
           hand("raw") ||
-          !!t().oven,
+          !!t().ovens.some(Boolean),
       },
       {
         key: "raw",
         text: "Select Confirm assembly and activate it. This creates RAW pizza; it cannot earn money yet. I closes without losing additions.",
         target: "topping",
-        test: () => hand("raw") || !!t().oven,
+        test: () => hand("raw") || !!t().ovens.some(Boolean),
       },
       {
         key: "oven",
-        text: "Take the raw pizza to Oven and press E. Only the oven can turn it into baked food.",
+        text: "Take raw pizza to highlighted Oven slot 1 and press E. The central shared oven has four numbered slots, each with its own timer. Approach a slot from its side to use it.",
         target: "oven",
         test: () =>
-          ["baking", "ready"].includes(t().oven?.stage) || hand("ready"),
+          ["baking", "ready"].includes(t().ovens.find(Boolean)?.stage) ||
+          hand("ready"),
       },
       {
         key: "collect",
-        text: "Wait three seconds, then press E at Oven to collect. A cooked pizza burns after 12 seconds. Restart lesson below if needed.",
+        text: "Wait three seconds, then press E at Oven to collect. A cooked pizza burns after 12 seconds. Use Restart lesson above if needed.",
         target: "oven",
         test: () => hand("ready"),
       },
@@ -192,7 +203,7 @@ class KitchenTutorial {
         text: "Finish this order: Toppings → confirm → Oven → collect → exact guest (or Pickup). No mandatory trip to Orders. Use the turquoise route; follow the highlighted button when a window is open.",
         target: () => {
           if (p().prep) return this.station("dough");
-          if (t().oven) return this.station("oven");
+          if (t().ovens.some(Boolean)) return this.station("oven");
           if (hand("dough")) return this.station("topping");
           if (hand("raw")) return this.station("oven");
           if (hand("ready")) return this.guestTarget();
@@ -202,7 +213,7 @@ class KitchenTutorial {
       },
       {
         key: "assistant",
-        text: "Hire a cook for 180 at the kitchen bench. Watch them prepare, walk to the shared oven, bake, and carry the finished pizza to Pickup. The waiter then delivers it. You may also collect baked food yourself.",
+        text: "Hire a cook for 180 at the kitchen hiring point (up to four). Each uses a separate preparation board and reserves a different regular order. Watch them prepare, walk to the shared oven, bake, and carry the finished pizza to the shared Pickup queue. The waiter then delivers it. You may also collect baked food yourself.",
         target: "assistant",
         enter: () => {
           g.addCustomer(t());
@@ -294,7 +305,7 @@ class KitchenTutorial {
           const o = g.vip;
           if (!o) return g.vipSeats[0].approach;
           if (!o.accepted.includes(0)) return g.vipSeats[o.seat].approach;
-          if (t().oven) return this.station("oven");
+          if (t().ovens.some(Boolean)) return this.station("oven");
           if (hand("ready")) return g.vipSeats[o.seat].approach;
           if (hand("raw")) return this.station("oven");
           if (hand("dough")) return this.station("topping");
